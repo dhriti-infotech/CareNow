@@ -1,98 +1,495 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const quickServices = [
+  {
+    title: "Nurse at Home",
+    subtitle: "Professional care",
+    icon: "medkit-outline" as const,
+  },
+  {
+    title: "Injection Service",
+    subtitle: "With prescription",
+    icon: "fitness-outline" as const,
+  },
+  {
+    title: "Prescription Medicines",
+    subtitle: "Delivered to you",
+    icon: "medical-outline" as const,
+  },
+  {
+    title: "Medical Equipment",
+    subtitle: "Buy or rent",
+    icon: "bandage-outline" as const,
+  },
+];
+
+const popularServices = [
+  {
+    title: "Injection administration",
+    icon: "fitness-outline" as const,
+  },
+  {
+    title: "Wound dressing",
+    icon: "bandage-outline" as const,
+  },
+  {
+    title: "BP / Sugar check",
+    icon: "heart-outline" as const,
+  },
+  {
+    title: "Elderly care",
+    icon: "people-outline" as const,
+  },
+  {
+    title: "Nursing visit",
+    icon: "medkit-outline" as const,
+  },
+];
 
 export default function HomeScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.container}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.locationContainer}>
+              <View style={styles.locationIcon}>
+                <Ionicons name="location" size={19} color="#2563EB" />
+              </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+              <View>
+                <Text style={styles.locationLabel}>Your Location</Text>
+                <View style={styles.locationRow}>
+                  <Text style={styles.locationText}>Select your location</Text>
+                  <Ionicons
+                    name="chevron-down"
+                    size={14}
+                    color="#475569"
+                  />
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.profileButton}>
+              <Ionicons name="person-outline" size={20} color="#1E293B" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Greeting */}
+          <View style={styles.greeting}>
+            <Text style={styles.greetingTitle}>Good Morning 👋</Text>
+            <Text style={styles.greetingSubtitle}>
+              How can we help you today?
+            </Text>
+          </View>
+
+          {/* Search */}
+          <TouchableOpacity style={styles.searchBox}>
+            <Ionicons name="search-outline" size={21} color="#64748B" />
+
+            <Text style={styles.searchText}>
+              Search for a service
+            </Text>
+          </TouchableOpacity>
+
+          {/* Quick Services */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>What do you need?</Text>
+          </View>
+
+          <View style={styles.serviceGrid}>
+            {quickServices.map((service) => (
+              <TouchableOpacity
+                key={service.title}
+                style={styles.serviceCard}
+                activeOpacity={0.8}
+                onPress={() => router.push("/services")}
+              >
+                <View style={styles.serviceIcon}>
+                  <Ionicons
+                    name={service.icon}
+                    size={27}
+                    color="#2563EB"
+                  />
+                </View>
+
+                <Text style={styles.serviceTitle}>
+                  {service.title}
+                </Text>
+
+                <Text style={styles.serviceSubtitle}>
+                  {service.subtitle}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Emergency / Quick Request */}
+          <TouchableOpacity
+            style={styles.urgentCard}
+            activeOpacity={0.85}
+            onPress={() => router.push("/services")}
+          >
+            <View style={styles.urgentIcon}>
+              <Ionicons name="flash" size={23} color="#FFFFFF" />
+            </View>
+
+            <View style={styles.urgentContent}>
+              <Text style={styles.urgentTitle}>
+                Need healthcare quickly?
+              </Text>
+
+              <Text style={styles.urgentSubtitle}>
+                Request a nearby healthcare worker
+              </Text>
+            </View>
+
+            <View style={styles.urgentArrow}>
+              <Ionicons
+                name="arrow-forward"
+                size={19}
+                color="#FFFFFF"
+              />
+            </View>
+          </TouchableOpacity>
+
+          {/* Popular Services */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Popular Services</Text>
+
+            <TouchableOpacity>
+              <Text style={styles.viewAll}>View all</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.popularContainer}>
+            {popularServices.map((service) => (
+              <TouchableOpacity
+                key={service.title}
+                style={styles.popularItem}
+                activeOpacity={0.7}
+              >
+                <View style={styles.popularIcon}>
+                  <Ionicons
+                    name={service.icon}
+                    size={20}
+                    color="#2563EB"
+                  />
+                </View>
+
+                <Text style={styles.popularText}>
+                  {service.title}
+                </Text>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={17}
+                  color="#94A3B8"
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Trust message */}
+          <View style={styles.trustCard}>
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={25}
+              color="#16A34A"
+            />
+
+            <View style={styles.trustTextContainer}>
+              <Text style={styles.trustTitle}>
+                Healthcare at your doorstep
+              </Text>
+
+              <Text style={styles.trustSubtitle}>
+                Connecting you with local healthcare services.
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 30,
+  },
+
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+
+  locationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  locationIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 9,
+  },
+
+  locationLabel: {
+    fontSize: 11,
+    color: "#64748B",
+    marginBottom: 2,
+  },
+
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  locationText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginRight: 3,
+  },
+
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  greeting: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+
+  greetingTitle: {
+    fontSize: 25,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+
+  greetingSubtitle: {
+    fontSize: 14,
+    color: "#64748B",
+    marginTop: 4,
+  },
+
+  searchBox: {
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    marginBottom: 24,
+  },
+
+  searchText: {
+    fontSize: 14,
+    color: "#94A3B8",
+    marginLeft: 10,
+  },
+
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+
+  viewAll: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2563EB",
+  },
+
+  serviceGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+
+  serviceCard: {
+    width: "48.2%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  serviceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 11,
+  },
+
+  serviceTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#1E293B",
+    lineHeight: 19,
+  },
+
+  serviceSubtitle: {
+    fontSize: 11,
+    color: "#64748B",
+    marginTop: 4,
+  },
+
+  urgentCard: {
+    backgroundColor: "#2563EB",
+    borderRadius: 16,
+    padding: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 26,
+  },
+
+  urgentIcon: {
+    width: 43,
+    height: 43,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  urgentContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  urgentTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+
+  urgentSubtitle: {
+    color: "#DBEAFE",
+    fontSize: 11,
+    marginTop: 3,
+  },
+
+  urgentArrow: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  popularContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+
+  popularItem: {
+    minHeight: 60,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+
+  popularIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 11,
+  },
+
+  popularText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#334155",
+  },
+
+  trustCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDF4",
+    borderRadius: 14,
+    padding: 14,
+  },
+
+  trustTextContainer: {
+    flex: 1,
+    marginLeft: 11,
+  },
+
+  trustTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#166534",
+  },
+
+  trustSubtitle: {
+    fontSize: 11,
+    color: "#4D7C0F",
+    marginTop: 3,
   },
 });
