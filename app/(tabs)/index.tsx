@@ -14,21 +14,25 @@ const quickServices = [
     title: "Nurse at Home",
     subtitle: "Professional care",
     icon: "medkit-outline" as const,
+    route: "/request-nurse",
   },
   {
     title: "Injection Service",
     subtitle: "With prescription",
     icon: "fitness-outline" as const,
+    route: "/services",
   },
   {
     title: "Prescription Medicines",
     subtitle: "Delivered to you",
     icon: "medical-outline" as const,
+    route: "/services"
   },
   {
     title: "Medical Equipment",
     subtitle: "Buy or rent",
     icon: "bandage-outline" as const,
+    route: "/services",
   },
 ];
 
@@ -116,7 +120,7 @@ export default function HomeScreen() {
                 key={service.title}
                 style={styles.serviceCard}
                 activeOpacity={0.8}
-                onPress={() => router.push("/services")}
+                onPress={() => router.push(service.route as any)}
               >
                 <View style={styles.serviceIcon}>
                   <Ionicons
