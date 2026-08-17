@@ -1,0 +1,60 @@
+{
+  "users": [
+    {
+        "id": "USR001",
+        "name": "Demo Patient",
+        "mobile": "9000000001",
+        "otp": "123456",
+        "role": "USER",
+        "status": "ACTIVE"
+    },
+    {
+        "id": "PRO001",
+        "name": "Demo Nurse",
+        "mobile": "9000000002",
+        "otp": "123456",
+        "role": "PROFESSIONAL",
+        "professionalType": "NURSE",
+        "qualification": "GNM",
+        "registrationNumber": "NURSE-DEMO-001",
+        "serviceArea": "Hyderabad",
+        "status": "APPROVED"
+    },
+    {
+        "id": "PRO002",
+        "name": "Demo Pharmacist",
+        "mobile": "9000000003",
+        "otp": "123456",
+        "role": "PROFESSIONAL",
+        "professionalType": "PHARMACIST",
+        "qualification": "D.Pharm",
+        "registrationNumber": "PHARM-DEMO-001",
+        "serviceArea": "Hyderabad",
+        "status": "APPROVED"
+    },
+    {
+        "id": "PRO003",
+        "name": "Suresh Kumar",
+        "mobile": "9000000004",
+        "otp": "123456",
+        "role": "PROFESSIONAL",
+        "professionalType": "HEALTH_WORKER",
+        "qualification": "Healthcare Assistant",
+        "registrationNumber": "HW-DEMO-001",
+        "serviceArea": "Hyderabad",
+        "status": "APPROVED"
+    },
+    {
+        "id": "PRO004",
+        "name": "Ramesh Medical Store",
+        "mobile": "9000000005",
+        "otp": "123456",
+        "role": "PROFESSIONAL",
+        "professionalType": "PHARMACIST",
+        "qualification": "D.Pharm",
+        "registrationNumber": "PHARM-DEMO-001",
+        "serviceArea": "Hyderabad",
+        "status": "APPROVED"
+    }
+  ]
+}
