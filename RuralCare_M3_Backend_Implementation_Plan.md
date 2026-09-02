@@ -1,8 +1,8 @@
-# RuralCare – M3 Backend & Production Readiness Plan
+# CareNow – M3 Backend & Production Readiness Plan
 
 ## 1. Project Overview
 
-RuralCare is a quick-service healthcare application focused initially on rural and semi-urban areas.
+CareNow is a quick-service healthcare application focused initially on rural and semi-urban areas.
 
 The goal is to provide essential healthcare services at the patient's location or deliver prescribed medicines/equipment quickly, with a target delivery/service window of approximately one hour.
 
@@ -48,13 +48,6 @@ The following functionality has already been implemented in the mobile applicati
 - Nurse request submission
 - Nurse request confirmation
 
-### Professional side
-
-Professional registration and login have been implemented in development mode.
-
-Supported professional types:
-
-- Nurse
 - Health Worker
 - Pharmacist
 
@@ -62,13 +55,14 @@ Professional dashboard currently supports:
 
 ### Common dashboard information
 
+
 - Professional name
 - Professional type
 - Availability
 - Lifetime earnings
 - Rating
 - Total ratings
-- Pending charges payable to RuralCare
+- Pending charges payable to CareNow
 - Professional profile navigation
 
 ### Nurse / Health Worker
@@ -96,19 +90,12 @@ Professional dashboard currently supports:
 - Distance
 - Estimated order value
 - View Prescription action
-
-### Development data
-
-The current professional dashboard uses development/sample data.
-
 Professional IDs currently used by the development model:
-
 - `PRO001` – Nurse
 - `PRO002` – Nurse
 - `PRO003` – Health Worker
 - `PRO004` – Pharmacist
 
-The development implementation contains:
 
 - `services/professional-stats.ts`
 - `services/professional-requests.ts`
@@ -134,7 +121,6 @@ This is temporary development behaviour.
 
 In the production system, approval must be controlled by an administrator / operations team.
 
----
 
 # 4. Current Development Authentication
 
@@ -174,7 +160,6 @@ The mobile application should NOT contain:
 - Business pricing rules
 - Database credentials
 - Admin credentials
-
 ---
 
 # 6. Backend
@@ -184,32 +169,19 @@ Recommended backend:
 - Java
 - Spring Boot
 - Spring Security
-- REST APIs
-- PostgreSQL
-- Redis where required
-- JWT / access token authentication
-- Refresh token mechanism
-- WebSocket or push notification integration where appropriate
-
-The backend will become the central business layer.
-
----
-
-# 7. Backend Modules
 
 The backend should be developed incrementally.
 
-## Milestone M4
 ## Phase B1 – Backend Foundation -- IN Progress....
 
-                 RuralCare Mobile
+                 CareNow Mobile
                  React Native / Expo
                          |
                        HTTPS
                          |
                          ▼
               ┌─────────────────────┐
-              │ RuralCare Backend   │
+              │ CareNow Backend   │
               │ Spring Boot         │
               └──────────┬──────────┘
                          |
@@ -227,7 +199,6 @@ The backend should be developed incrementally.
 
 First create the backend project and establish:
 
-- Spring Boot project
 - REST API structure
 - Configuration management
 - PostgreSQL connection
@@ -242,7 +213,7 @@ First create the backend project and establish:
 Suggested packages:
 
 ```text
-com.ruralcare
+com.carenow
 ├── config
 ├── controller
 ├── dto
@@ -252,7 +223,6 @@ com.ruralcare
 ├── security
 ├── service
 └── util
-```
 
 ---
 
@@ -860,7 +830,7 @@ Potential future components:
 
 - Patient payment
 - Professional earnings
-- RuralCare platform fee
+                - CareNow platform fee
 - Pending professional charges
 - Refunds
 - Settlement
@@ -909,7 +879,7 @@ Implement in this exact order:
 Create:
 
 ```text
-ruralcare-backend
+riven-backend
 ```
 
 Set up:
@@ -1072,17 +1042,17 @@ Never put production credentials into the development application.
 Initial project:
 
 ```text
-ruralcare-backend/
+carenow-backend/
 ```
 
 Suggested structure:
 
 ```text
-ruralcare-backend
+carenow-backend
 ├── src
 │   ├── main
 │   │   ├── java
-│   │   │   └── com.ruralcare
+│   │   │   └── com.carenow
 │   │   │       ├── config
 │   │   │       ├── controller
 │   │   │       ├── dto
@@ -1141,11 +1111,11 @@ We should progressively replace development/sample logic behind the existing scr
 Target architecture:
 
 ```text
-                RuralCare Mobile App
+                CareNow Mobile App
                          |
                          | HTTPS
                          v
-              RuralCare Spring Boot API
+              CareNow Spring Boot API
                          |
         +----------------+----------------+
         |                |                |

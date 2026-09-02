@@ -202,7 +202,7 @@ export default function ProfessionalProfileScreen() {
           </TouchableOpacity>
 
           <Text style={styles.version}>
-            RuralCare • Development Build
+            CareNow • Development Build
           </Text>
         </ScrollView>
       </View>

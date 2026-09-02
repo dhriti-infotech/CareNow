@@ -1,6 +1,6 @@
-# RuralCare --- Milestone 1 Development Progress
+# CareNow --- Milestone 1 Development Progress
 
-**Project:** RuralCare\
+**Project:** CareNow\
 **Milestone:** 1 --- Mobile Foundation & Initial Patient Flow\
 **Status:** In Progress\
 **Checkpoint:** Initial patient UI and healthcare-service navigation
@@ -10,7 +10,7 @@ completed
 
 ## 1. Objective
 
-The first milestone is to establish the RuralCare mobile application
+The first milestone is to establish the CareNow mobile application
 foundation and implement the first meaningful patient journey.
 
 The agreed first flow is:
@@ -57,7 +57,7 @@ The application is successfully running on the Android device.
 Current relevant structure:
 
 ``` text
-RuralCare/
+CareNow/
 │
 └── app/
     ├── _layout.tsx
@@ -80,7 +80,7 @@ navigation using Expo Router configuration.
 
 ## 4. Completed Home Screen
 
-The default Expo starter screen has been replaced with the RuralCare
+The default Expo starter screen has been replaced with the CareNow
 patient home screen.
 
 The Home screen currently contains:
@@ -114,7 +114,7 @@ yet.
 
 ### Core Service Cards
 
-The four primary RuralCare services are visible:
+The four primary CareNow services are visible:
 
 1.  Nurse at Home
 2.  Injection Service
@@ -279,7 +279,7 @@ The Continue button is intentionally not implemented yet.
 The following flow is working on the physical Android device:
 
 ``` text
-                    RuralCare Home
+                    CareNow Home
                          │
           ┌──────────────┼───────────────┐
           │              │               │
@@ -493,8 +493,8 @@ Those capabilities will be added after the UI/state flow is stable.
 -   [x] Node.js setup
 -   [x] Expo setup
 -   [x] Expo Go on Android
--   [x] RuralCare project created
--   [x] RuralCare Home screen
+                    -   [x] CareNow project created
+                    -   [x] CareNow Home screen
 -   [x] Bottom navigation
 -   [x] Home / Orders / Profile
 -   [x] Healthcare Services screen

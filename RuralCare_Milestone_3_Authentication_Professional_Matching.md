@@ -1,11 +1,11 @@
-# RuralCare — Milestone 3
+# CareNow — Milestone 3
 ## Authentication, Professionals & Nurse Request Matching
 
 **Status:** Planned — Not Started
 
 ### Objective
 
-Milestone 3 moves RuralCare from a patient-only UI prototype toward a two-sided healthcare service platform.
+Milestone 3 moves CareNow from a patient-only UI prototype toward a two-sided healthcare service platform.
 
 The same React Native application will initially support role-based experiences:
 
@@ -20,7 +20,7 @@ ADMIN (future)
 ### Target architecture
 
 ```text
-RuralCare Mobile App
+CareNow Mobile App
         │
    Login / Signup
         │
@@ -505,7 +505,7 @@ Not required for this milestone:
 
 ### Core product principle
 
-RuralCare is a two-sided service platform:
+CareNow is a two-sided service platform:
 
 ```text
 PATIENT NEED

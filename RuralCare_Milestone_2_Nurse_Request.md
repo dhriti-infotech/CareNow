@@ -1,11 +1,11 @@
-# RuralCare — Milestone 2
+# CareNow — Milestone 2
 ## Nurse at Home Request Flow
 
 **Status:** Complete — Mobile Prototype
 
 ### Objective
 
-Milestone 2 converts the RuralCare Home UI into a working patient-side Nurse at Home request prototype.
+Milestone 2 converts the CareNow Home UI into a working patient-side Nurse at Home request prototype.
 
 ```text
 Home

@@ -16,7 +16,7 @@ export interface AppUser {
   serviceArea?: string;
 }
 
-const SESSION_KEY = "@ruralcare_session";
+const SESSION_KEY = "@carenow_session";
 
 const users: AppUser[] = usersData.users as AppUser[];
 

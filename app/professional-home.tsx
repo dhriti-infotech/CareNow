@@ -2,35 +2,38 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-    AppUser,
-    getSession,
-    updateSessionStatus,
+  AppUser,
+  getSession,
+  updateSessionStatus,
 } from "../services/auth";
 
+import { useAuth } from "../context/auth-context";
+
 import {
-    developmentProfessionalStats,
-    ProfessionalStats,
-    ProfessionalType,
+  developmentProfessionalStats,
+  ProfessionalStats,
+  ProfessionalType,
 } from "../services/professional-stats";
 
 import {
-    developmentPrescriptionOrders,
-    developmentServiceRequests,
-    PrescriptionOrder,
-    ServiceRequest,
+  developmentPrescriptionOrders,
+  developmentServiceRequests,
+  PrescriptionOrder,
+  ServiceRequest,
 } from "../services/professional-requests";
 
 export default function ProfessionalHomeScreen() {
+  const { user: authUser } = useAuth();
   const [user, setUser] = useState<AppUser | null>(null);
 
   const [status, setStatus] = useState<
@@ -56,42 +59,39 @@ export default function ProfessionalHomeScreen() {
 
     const initializeProfessional = async () => {
       const session = await getSession();
+      const fallbackProfessionalUser = authUser && authUser.role === "PROFESSIONAL"
+        ? {
+            id: String(authUser.id),
+            name: authUser.email.split("@")[0] || "Professional",
+            mobile: "",
+            otp: "",
+            role: "PROFESSIONAL" as const,
+            status: "APPROVED",
+            professionalType: authUser.professionalType || "NURSE",
+          }
+        : null;
 
-      /*
-       * No session
-       */
-      if (!session) {
+      const activeUser = session ?? fallbackProfessionalUser;
+
+      if (!activeUser) {
         router.replace("/login");
         return;
       }
 
-      setUser(session);
+      setUser(activeUser);
 
-      /*
-       * Existing approved professional.
-       *
-       * IMPORTANT:
-       * Do NOT start the 5 second timer here.
-       */
-      if (session.status === "APPROVED") {
+      if (activeUser.status === "APPROVED") {
         setStatus("APPROVED");
         setLoading(false);
 
         return;
       }
 
-      /*
-       * Newly registered professional.
-       *
-       * Development mode:
-       * automatically approve after 5 seconds.
-       */
       setStatus("PENDING");
       setLoading(false);
 
       timer = setTimeout(async () => {
-        const updatedUser =
-          await updateSessionStatus("APPROVED");
+        const updatedUser = await updateSessionStatus("APPROVED");
 
         if (updatedUser) {
           setUser(updatedUser);
@@ -103,15 +103,12 @@ export default function ProfessionalHomeScreen() {
 
     initializeProfessional();
 
-    /*
-     * Cleanup timer if the screen is unmounted.
-     */
     return () => {
       if (timer) {
         clearTimeout(timer);
       }
     };
-  }, []);
+  }, [authUser]);
 
   /*
    * Loading screen
@@ -703,7 +700,7 @@ export default function ProfessionalHomeScreen() {
               <Text
                 style={styles.chargesTitle}
               >
-                Payable to RuralCare
+                Payable to CareNow
               </Text>
 
               <Text

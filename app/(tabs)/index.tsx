@@ -87,7 +87,11 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.profileButton}>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => router.push("/(tabs)/profile")}
+              activeOpacity={0.8}
+            >
               <Ionicons name="person-outline" size={20} color="#1E293B" />
             </TouchableOpacity>
           </View>
