@@ -5,10 +5,9 @@ import { AuthStorage } from '../services/auth-storage';
 import type { ApiError } from '../types/auth';
 
 const PUBLIC_AUTH_PATHS = [
-  '/api/auth/register/send-otp',
-  '/api/auth/register/verify-otp',
-  '/api/auth/login/send-otp',
-  '/api/auth/login/verify-otp',
+  '/api/user-auth/register',
+  '/api/professional-auth/register',
+  '/api/unified-auth/login/',
 ];
 
 const apiClient = axios.create({
@@ -30,6 +29,9 @@ export const setSessionExpiredHandler = (handler: () => void) => {
 };
 
 export const normalizeApiError = (error: any): ApiError => {
+  if (error && typeof error === 'object' && typeof error.code === 'string' && typeof error.message === 'string' && !error.response) {
+    return error as ApiError;
+  }
   const backendError = error?.response?.data;
 
   if (backendError && typeof backendError === 'object' && 'code' in backendError) {
@@ -41,14 +43,14 @@ export const normalizeApiError = (error: any): ApiError => {
 
     return {
       code: String(backendError.code ?? 'UNKNOWN_ERROR'),
-      message: String(backendError.message ?? 'Something went wrong.'),
+      message: messageForStatus(error?.response?.status, String(backendError.message ?? 'Something went wrong.')),
       timestamp: typeof backendError.timestamp === 'string' ? backendError.timestamp : undefined,
     };
   }
 
-  const message = error?.message === 'Network Error'
-    ? 'Unable to connect to CareNow. Please check your internet connection and try again.'
-    : 'Unable to connect to CareNow. Please try again.';
+  const message = error?.message === 'Network Error' || error?.code === 'ECONNABORTED'
+    ? 'Unable to connect to CareNow. Please check your connection and try again.'
+    : messageForStatus(error?.response?.status);
 
   console.log('[CareNow API] Network/request error:', {
     message: error?.message,
@@ -102,7 +104,8 @@ apiClient.interceptors.response.use(
       data: error?.response?.data,
     });
 
-    if (status === 401 && !isSessionExpiryHandling) {
+    const isPublicAuthRequest = PUBLIC_AUTH_PATHS.some((path) => (error?.config?.url ?? '').includes(path));
+    if (status === 401 && !isPublicAuthRequest && !isSessionExpiryHandling) {
       isSessionExpiryHandling = true;
 
       try {
@@ -121,3 +124,12 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
+
+function messageForStatus(status?: number, fallback = 'Something went wrong. Please try again.') {
+  if (status === 409) return 'An account with this mobile number or email already exists.';
+  if (status === 401) return 'Invalid OTP or session. Please try again.';
+  if (status === 403) return 'You do not have permission to perform this action.';
+  if (status === 404) return 'We could not find that account.';
+  if (status && status >= 500) return 'The CareNow server is unavailable. Please try again shortly.';
+  return fallback;
+}

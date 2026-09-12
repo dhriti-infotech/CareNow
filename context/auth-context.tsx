@@ -8,9 +8,8 @@ import {
     useState,
 } from 'react';
 
-import { getCurrentUser } from '../api/authApi';
+import { getProfessionalProfile, getUserProfile } from '../api/authApi';
 import { setSessionExpiredHandler } from '../api/client';
-import { logout as clearLegacySession } from '../services/auth';
 import { AuthStorage } from '../services/auth-storage';
 import type { AuthResponse, AuthState, AuthUser } from '../types/auth';
 
@@ -26,6 +25,7 @@ type AuthContextValue = AuthState & {
   logout: (options?: { redirect?: boolean }) => Promise<void>;
   restoreSession: () => Promise<void>;
   setUser: (user: AuthUser | null) => void;
+  refreshProfessionalStatus: () => Promise<AuthUser | null>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -34,7 +34,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState);
 
   const logout = useCallback(async (options?: { redirect?: boolean }) => {
-    await clearLegacySession();
     await AuthStorage.clear();
     setState({
       isLoading: false,
@@ -49,20 +48,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (authResponse: AuthResponse) => {
-    const normalizedUser: AuthUser = {
-      ...authResponse.user,
-      role: authResponse.user.role || 'USER',
-      professionalType: authResponse.user.professionalType,
-    };
-
-    await clearLegacySession();
-    await AuthStorage.saveToken(authResponse.accessToken);
-    await AuthStorage.saveUser(normalizedUser);
+    const { accessToken, tokenType, ...normalizedUser } = authResponse;
+    await AuthStorage.saveSession({ ...authResponse, role: authResponse.role });
 
     setState({
       isLoading: false,
       isAuthenticated: true,
-      accessToken: authResponse.accessToken,
+      accessToken,
       user: normalizedUser,
     });
   }, []);
@@ -70,8 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const restoreSession = useCallback(async () => {
     setState((current) => ({ ...current, isLoading: true }));
 
-    const token = await AuthStorage.getToken();
-    if (!token) {
+    const session = await AuthStorage.getSession();
+    if (!session) {
       setState({
         isLoading: false,
         isAuthenticated: false,
@@ -82,14 +74,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const user = await getCurrentUser();
+      let user: AuthUser;
+      if (session.role === 'PROFESSIONAL') {
+        const profile = await getProfessionalProfile(session.accountId);
+        user = { ...session, ...profile, role: 'PROFESSIONAL', profileId: profile.professionalId };
+      } else {
+        const profile = await getUserProfile(session.accountId);
+        user = { ...session, ...profile, role: 'USER', profileId: profile.userProfileId, professionalType: null, verificationStatus: null };
+      }
+      await AuthStorage.saveSession({ ...session, ...user });
       setState({
         isLoading: false,
         isAuthenticated: true,
-        accessToken: token,
+        accessToken: session.accessToken,
         user,
       });
-      await AuthStorage.saveUser(user);
     } catch (error) {
       await AuthStorage.clear();
       setState({
@@ -102,11 +101,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setUser = useCallback((user: AuthUser | null) => {
+    if (user) void AuthStorage.saveUser(user);
     setState((current) => ({
       ...current,
       user,
       isAuthenticated: Boolean(user),
     }));
+  }, []);
+
+  const refreshProfessionalStatus = useCallback(async () => {
+    const session = await AuthStorage.getSession();
+    if (!session || session.role !== 'PROFESSIONAL') return null;
+    const profile = await getProfessionalProfile(session.accountId);
+    const user: AuthUser = { ...session, ...profile, role: 'PROFESSIONAL', profileId: profile.professionalId };
+    await AuthStorage.saveSession({ ...session, ...user });
+    setState((current) => ({ ...current, user, isAuthenticated: true }));
+    return user;
   }, []);
 
   useEffect(() => {
@@ -122,8 +132,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       restoreSession,
       setUser,
+      refreshProfessionalStatus,
     }),
-    [state, login, logout, restoreSession, setUser]
+    [state, login, logout, restoreSession, setUser, refreshProfessionalStatus]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

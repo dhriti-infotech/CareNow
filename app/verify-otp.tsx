@@ -15,18 +15,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   sendLoginOtp,
-  sendRegistrationOtp,
+  verifyUserMobile,
+  verifyProfessionalMobile,
   verifyLoginOtp,
-  verifyRegistrationOtp,
 } from "../api/authApi";
 import { normalizeApiError } from "../api/client";
 import { useAuth } from "../context/auth-context";
-import { logout as clearLegacySession, saveSession } from "../services/auth";
+import { AuthStorage } from "../services/auth-storage";
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
-type Purpose = "LOGIN" | "REGISTRATION";
+type Purpose = "LOGIN" | "USER_REGISTRATION" | "PROFESSIONAL_REGISTRATION";
 type SelectedRole = "USER" | "PROFESSIONAL";
 type ProfessionalType = "NURSE" | "HEALTH_WORKER" | "PHARMACIST";
 
@@ -58,6 +58,7 @@ const getUiMessageForCode = (code?: string): string => {
 export default function VerifyOtpScreen() {
   const params = useLocalSearchParams<{
     email?: string;
+    identifier?: string;
     purpose?: string;
     rolePreference?: string;
     professionalType?: string;
@@ -65,7 +66,7 @@ export default function VerifyOtpScreen() {
   const { login } = useAuth();
 
   const purpose = (params.purpose as Purpose) ?? "LOGIN";
-  const email = (params.email as string) ?? "";
+  const email = (params.identifier ?? params.email ?? "") as string;
   const rolePreference = (params.rolePreference as SelectedRole | undefined) ?? "USER";
   const professionalType = (params.professionalType as ProfessionalType | undefined) ?? "NURSE";
   const [otp, setOtp] = useState("");
@@ -108,12 +109,12 @@ export default function VerifyOtpScreen() {
     }
 
     if (!email) {
-      setError("Missing email. Please retry the process.");
+      setError("Missing mobile number. Please retry the process.");
       return;
     }
 
     if (otp.trim().length !== OTP_LENGTH || !/^\d{6}$/.test(otp)) {
-      setError("Please enter the 6-digit code sent to your email.");
+      setError("Please enter the 6-digit code sent to your mobile.");
       return;
     }
 
@@ -122,36 +123,22 @@ export default function VerifyOtpScreen() {
 
     try {
       const response =
-        purpose === "REGISTRATION"
-          ? await verifyRegistrationOtp(email, otp)
-          : await verifyLoginOtp(email, otp);
+        purpose === "USER_REGISTRATION"
+          ? await verifyUserMobile({ mobile: email, otp })
+          : purpose === "PROFESSIONAL_REGISTRATION"
+            ? await verifyProfessionalMobile({ mobile: email, otp })
+            : await verifyLoginOtp(email, otp);
 
-      const finalUser = {
-        ...response.user,
-        role: rolePreference === "PROFESSIONAL" ? "PROFESSIONAL" : "USER",
-        professionalType: rolePreference === "PROFESSIONAL" ? professionalType : "USER",
-      };
+      if (purpose !== "LOGIN") {
+        await AuthStorage.clearPendingRegistration();
+        router.replace("/login");
+        return;
+      }
 
-      const finalSessionRole: "USER" | "PROFESSIONAL" =
-        rolePreference === "PROFESSIONAL" ? "PROFESSIONAL" : "USER";
+      const loginResponse = response as import("../types/auth").AuthResponse;
+      await login(loginResponse);
 
-      await clearLegacySession();
-      await saveSession({
-        id: String(finalUser.id),
-        name: finalUser.email.split('@')[0] || 'CareNow User',
-        mobile: '',
-        otp: '',
-        role: finalSessionRole,
-        professionalType: finalUser.professionalType,
-        status: finalSessionRole === 'PROFESSIONAL' ? 'APPROVED' : 'ACTIVE',
-      });
-
-      await login({
-        ...response,
-        user: finalUser,
-      });
-
-      if (rolePreference === "PROFESSIONAL") {
+      if (loginResponse.role === "PROFESSIONAL" && loginResponse.verificationStatus === "APPROVED") {
         router.replace({
           pathname: "/professional-home",
           params: {
@@ -161,7 +148,7 @@ export default function VerifyOtpScreen() {
         return;
       }
 
-      router.replace("/(tabs)");
+      router.replace(loginResponse.role === "USER" ? "/(tabs)" : "/professional-verification");
     } catch (apiError) {
       const normalized = normalizeApiError(apiError);
       const uiMessage = getUiMessageForCode(normalized.code);
@@ -186,10 +173,11 @@ export default function VerifyOtpScreen() {
     setError("");
 
     try {
-      if (purpose === "REGISTRATION") {
-        await sendRegistrationOtp(email);
-      } else {
+      if (purpose === "LOGIN") {
         await sendLoginOtp(email);
+      } else {
+        setError("Please return to registration to request another OTP.");
+        return;
       }
 
       setOtp("");

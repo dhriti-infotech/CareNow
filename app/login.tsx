@@ -456,6 +456,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -470,27 +471,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { sendLoginOtp } from "../api/authApi";
 import { normalizeApiError } from "../api/client";
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-type SelectedRole = "USER" | "PROFESSIONAL";
-
 export default function LoginScreen() {
-  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedRole, setSelectedRole] =
-    useState<SelectedRole>("USER");
 
   const handleContinue = async () => {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedMobile = mobile.replace(/\D/g, "");
 
-    if (!normalizedEmail) {
-      setError("Email is required.");
+    if (!normalizedMobile) {
+      setError("Mobile number is required.");
       return;
     }
 
-    if (!EMAIL_REGEX.test(normalizedEmail)) {
-      setError("Please enter a valid email address.");
+    if (normalizedMobile.length !== 10) {
+      setError("Please enter a valid 10-digit mobile number.");
       return;
     }
 
@@ -498,14 +493,13 @@ export default function LoginScreen() {
     setIsSubmitting(true);
 
     try {
-      await sendLoginOtp(normalizedEmail);
+      await sendLoginOtp(normalizedMobile);
 
       router.push({
         pathname: "/verify-otp",
         params: {
-          email: normalizedEmail,
+          identifier: normalizedMobile,
           purpose: "LOGIN",
-          rolePreference: selectedRole,
         },
       });
     } catch (apiError) {
@@ -527,14 +521,13 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* CareNow Logo */}
           <View style={styles.logoContainer}>
-            <View style={styles.logo}>
-              <Ionicons
-                name="medical"
-                size={34}
-                color="#FFFFFF"
-              />
-            </View>
+            <Image
+              source={require("../assets/images/carenow-logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
 
             <Text style={styles.brand}>CareNow</Text>
 
@@ -543,104 +536,36 @@ export default function LoginScreen() {
             </Text>
           </View>
 
+          {/* Login Card */}
           <View style={styles.card}>
-            <Text style={styles.title}>
-              Welcome back
-            </Text>
+            <Text style={styles.title}>Welcome back</Text>
 
             <Text style={styles.subtitle}>
               Login to access CareNow services
             </Text>
 
-            <Text style={styles.label}>
-              Email address
-            </Text>
+            <Text style={styles.label}>Mobile number</Text>
 
             <TextInput
-              value={email}
+              value={mobile}
               onChangeText={(value) => {
-                setEmail(value);
+                setMobile(value.replace(/\D/g, ""));
 
                 if (error) {
                   setError("");
                 }
               }}
-              placeholder="Enter your email"
+              placeholder="Enter 10-digit mobile number"
               placeholderTextColor="#94A3B8"
-              keyboardType="email-address"
+              keyboardType="phone-pad"
+              maxLength={10}
               autoCapitalize="none"
               autoCorrect={false}
               style={styles.input}
             />
 
-            <View style={styles.roleSection}>
-              <Text style={styles.roleTitle}>
-                Select the role you want to log in as
-              </Text>
-
-              <View style={styles.roleOptions}>
-                <TouchableOpacity
-                  style={[
-                    styles.roleOption,
-                    selectedRole === "USER" &&
-                      styles.roleOptionSelected,
-                  ]}
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    setSelectedRole("USER")
-                  }
-                >
-                  <View
-                    style={[
-                      styles.radio,
-                      selectedRole === "USER" &&
-                        styles.radioSelected,
-                    ]}
-                  >
-                    {selectedRole === "USER" && (
-                      <View style={styles.radioDot} />
-                    )}
-                  </View>
-
-                  <Text style={styles.roleOptionText}>
-                    User
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.roleOption,
-                    selectedRole === "PROFESSIONAL" &&
-                      styles.roleOptionSelected,
-                  ]}
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    setSelectedRole("PROFESSIONAL")
-                  }
-                >
-                  <View
-                    style={[
-                      styles.radio,
-                      selectedRole === "PROFESSIONAL" &&
-                        styles.radioSelected,
-                    ]}
-                  >
-                    {selectedRole === "PROFESSIONAL" && (
-                      <View style={styles.radioDot} />
-                    )}
-                  </View>
-
-                  <Text style={styles.roleOptionText}>
-                    Professional
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
             {error ? (
-              <Text style={styles.errorText}>
-                {error}
-              </Text>
+              <Text style={styles.errorText}>{error}</Text>
             ) : null}
 
             <TouchableOpacity
@@ -672,6 +597,7 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
+            {/* Registration Divider */}
             <View style={styles.dividerContainer}>
               <View style={styles.divider} />
 
@@ -682,18 +608,18 @@ export default function LoginScreen() {
               <View style={styles.divider} />
             </View>
 
+            {/* User Registration */}
             <TouchableOpacity
               style={styles.secondaryButton}
               activeOpacity={0.85}
-              onPress={() =>
-                router.push("/register-user")
-              }
+              onPress={() => router.push("/register-user")}
             >
               <Text style={styles.secondaryButtonText}>
                 Register as User
               </Text>
             </TouchableOpacity>
 
+            {/* Professional Registration */}
             <TouchableOpacity
               style={styles.professionalButton}
               activeOpacity={0.85}
@@ -707,17 +633,16 @@ export default function LoginScreen() {
                 color="#2563EB"
               />
 
-              <Text
-                style={styles.professionalButtonText}
-              >
+              <Text style={styles.professionalButtonText}>
                 Register as Healthcare Professional
               </Text>
             </TouchableOpacity>
           </View>
 
+          {/* Footer */}
           <Text style={styles.footer}>
-            By continuing, you agree to CareNow&apos;s
-            Terms of Service and Privacy Policy.
+            By continuing, you agree to CareNow&apos;s Terms of
+            Service and Privacy Policy.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -743,18 +668,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  /* Logo */
   logoContainer: {
     alignItems: "center",
     marginBottom: 30,
   },
 
   logo: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
-    backgroundColor: "#2563EB",
-    alignItems: "center",
-    justifyContent: "center",
+    width: 90,
+    height: 90,
   },
 
   brand: {
@@ -770,6 +692,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  /* Card */
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
@@ -810,75 +733,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  roleSection: {
-    marginTop: 4,
-    marginBottom: 16,
-  },
-
-  roleTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#334155",
-    marginBottom: 10,
-  },
-
-  // Side-by-side User / Professional options
-  roleOptions: {
-    flexDirection: "row",
-    gap: 10,
-  },
-
-  roleOption: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 11,
-    backgroundColor: "#FFFFFF",
-  },
-
-  roleOptionSelected: {
-    borderColor: "#2563EB",
-    backgroundColor: "#F8FBFF",
-  },
-
-  roleOptionText: {
-    marginLeft: 10,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-
-  radio: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: "#CBD5E1",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  radioSelected: {
-    borderColor: "#2563EB",
-  },
-
-  radioDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#2563EB",
-  },
-
   errorText: {
     color: "#B91C1C",
     fontSize: 12,
     marginBottom: 12,
   },
 
+  /* Primary Button */
   primaryButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -899,6 +760,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  /* Divider */
   dividerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -919,6 +781,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  /* User Registration */
   secondaryButton: {
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -935,6 +798,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  /* Professional Registration */
   professionalButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -952,6 +816,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  /* Footer */
   footer: {
     marginTop: 18,
     textAlign: "center",

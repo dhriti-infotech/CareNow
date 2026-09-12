@@ -13,21 +13,26 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { sendRegistrationOtp } from "../api/authApi";
+import { registerUser } from "../api/authApi";
 import { normalizeApiError } from "../api/client";
+import { AuthStorage } from "../services/auth-storage";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterUserScreen() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [address, setAddress] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleContinue = async () => {
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedMobile = mobile.replace(/\D/g, "");
 
-    if (!normalizedEmail) {
-      setError("Email is required.");
+    if (!name.trim() || !normalizedEmail || normalizedMobile.length !== 10) {
+      setError("Name, email, and a valid 10-digit mobile number are required.");
       return;
     }
 
@@ -40,12 +45,13 @@ export default function RegisterUserScreen() {
     setIsSubmitting(true);
 
     try {
-      await sendRegistrationOtp(normalizedEmail);
+      await registerUser({ name: name.trim(), email: normalizedEmail, mobile: normalizedMobile, address: address.trim() || undefined });
+      await AuthStorage.savePendingRegistration({ kind: "USER", mobile: normalizedMobile });
       router.push({
         pathname: "/verify-otp",
         params: {
-          email: normalizedEmail,
-          purpose: "REGISTRATION",
+          identifier: normalizedMobile,
+          purpose: "USER_REGISTRATION",
         },
       });
     } catch (apiError) {
@@ -85,6 +91,8 @@ export default function RegisterUserScreen() {
           <Text style={styles.title}>Create your CareNow account</Text>
           <Text style={styles.subtitle}>Register to request healthcare services at your doorstep.</Text>
 
+          <Text style={styles.label}>Full name</Text>
+          <TextInput value={name} onChangeText={setName} placeholder="Enter your full name" placeholderTextColor="#94A3B8" style={styles.input} />
           <Text style={styles.label}>Email address</Text>
           <TextInput
             value={email}
@@ -99,12 +107,16 @@ export default function RegisterUserScreen() {
             autoCorrect={false}
             style={styles.input}
           />
+          <Text style={styles.label}>Mobile number</Text>
+          <TextInput value={mobile} onChangeText={(value) => setMobile(value.replace(/\D/g, ""))} placeholder="Enter 10-digit mobile number" placeholderTextColor="#94A3B8" keyboardType="phone-pad" maxLength={10} style={styles.input} />
+          <Text style={styles.label}>Address (optional)</Text>
+          <TextInput value={address} onChangeText={setAddress} placeholder="Enter your address" placeholderTextColor="#94A3B8" style={styles.input} />
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <View style={styles.infoCard}>
             <Ionicons name="shield-checkmark-outline" size={20} color="#2563EB" />
-            <Text style={styles.infoText}>We&apos;ll verify your email using a one-time password.</Text>
+            <Text style={styles.infoText}>We&apos;ll verify your mobile number using a one-time password.</Text>
           </View>
 
           <TouchableOpacity

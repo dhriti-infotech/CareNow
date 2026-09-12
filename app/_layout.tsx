@@ -20,6 +20,7 @@ export default function RootLayout() {
         <Stack.Screen name="verify-otp" options={{ headerShown: false }} />
         <Stack.Screen name="professional-profile" options={{ headerShown: false }} />
         <Stack.Screen name="professional-home" options={{ headerShown: false }} />
+        <Stack.Screen name="professional-verification" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="request-nurse" options={{ headerShown: false }} />
         <Stack.Screen name="nurse-request-submitted" options={{ headerShown: false }} />

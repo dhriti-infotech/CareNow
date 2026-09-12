@@ -11,11 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-  AppUser,
-  getSession,
-  updateSessionStatus,
-} from "../services/auth";
+import { AppUser, getSession } from "../services/auth";
 
 import { useAuth } from "../context/auth-context";
 
@@ -61,12 +57,12 @@ export default function ProfessionalHomeScreen() {
       const session = await getSession();
       const fallbackProfessionalUser = authUser && authUser.role === "PROFESSIONAL"
         ? {
-            id: String(authUser.id),
+            id: authUser.accountId,
             name: authUser.email.split("@")[0] || "Professional",
             mobile: "",
             otp: "",
             role: "PROFESSIONAL" as const,
-            status: "APPROVED",
+            status: authUser.verificationStatus || "PENDING",
             professionalType: authUser.professionalType || "NURSE",
           }
         : null;
@@ -90,15 +86,8 @@ export default function ProfessionalHomeScreen() {
       setStatus("PENDING");
       setLoading(false);
 
-      timer = setTimeout(async () => {
-        const updatedUser = await updateSessionStatus("APPROVED");
-
-        if (updatedUser) {
-          setUser(updatedUser);
-        }
-
-        setStatus("APPROVED");
-      }, 5000);
+      // Verification is controlled by the backend; this screen never promotes
+      // a professional locally.
     };
 
     initializeProfessional();

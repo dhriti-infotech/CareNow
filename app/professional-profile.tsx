@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
 import {
     Alert,
     ScrollView,
@@ -11,25 +10,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-    AppUser,
-    getSession,
-    logout,
-} from "../services/auth";
+import { useAuth } from "../context/auth-context";
 
 export default function ProfessionalProfileScreen() {
-  const [user, setUser] = useState<AppUser | null>(
-    null
-  );
-
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
-    const session = await getSession();
-    setUser(session);
-  };
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     Alert.alert(
@@ -43,10 +27,7 @@ export default function ProfessionalProfileScreen() {
         {
           text: "Logout",
           style: "destructive",
-          onPress: async () => {
-            await logout();
-            router.replace("/login");
-          },
+          onPress: () => logout(),
         },
       ]
     );
@@ -98,7 +79,7 @@ export default function ProfessionalProfileScreen() {
             </Text>
 
             <Text style={styles.mobile}>
-              +91 {user?.mobile || ""}
+              {user?.mobile || ""}
             </Text>
 
             <View style={styles.typeBadge}>

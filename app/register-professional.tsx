@@ -3,6 +3,8 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,20 +13,24 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { registerProfessional } from "../api/authApi";
+import { normalizeApiError } from "../api/client";
+import { AuthStorage } from "../services/auth-storage";
+import type { ProfessionalType } from "../types/auth";
 
 const professionalTypes = [
   {
-    id: "nurse",
+    id: "NURSE" as ProfessionalType,
     title: "Nurse",
     icon: "medkit-outline" as const,
   },
   {
-    id: "compounder",
+    id: "COMPOUNDER" as ProfessionalType,
     title: "Compounder / Healthcare Worker",
     icon: "fitness-outline" as const,
   },
   {
-    id: "pharmacist",
+    id: "PHARMACIST" as ProfessionalType,
     title: "Pharmacist",
     icon: "medical-outline" as const,
   },
@@ -32,9 +38,10 @@ const professionalTypes = [
 
 export default function RegisterProfessionalScreen() {
   const [selectedType, setSelectedType] =
-    useState("nurse");
+    useState<ProfessionalType>("NURSE");
 
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [qualification, setQualification] =
     useState("");
@@ -43,7 +50,7 @@ export default function RegisterProfessionalScreen() {
   const [serviceArea, setServiceArea] =
     useState("");
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const cleanedMobile = mobile.replace(/\D/g, "");
 
     if (!name.trim()) {
@@ -59,6 +66,11 @@ export default function RegisterProfessionalScreen() {
         "Invalid mobile number",
         "Please enter a valid 10-digit mobile number."
       );
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      Alert.alert("Valid email required", "Please enter a valid email address.");
       return;
     }
 
@@ -86,15 +98,24 @@ export default function RegisterProfessionalScreen() {
       return;
     }
 
-    router.push({
-      pathname: "/verify-otp",
-      params: {
-        mobile: cleanedMobile,
-        mode: "professional-registration",
-        name,
+    try {
+      await registerProfessional({
         professionalType: selectedType,
-      },
-    });
+        fullName: name.trim(),
+        email: email.trim().toLowerCase(),
+        mobile: cleanedMobile,
+        qualification: qualification.trim(),
+        registrationNumber: registrationNumber.trim(),
+        serviceArea: serviceArea.trim(),
+      });
+      await AuthStorage.savePendingRegistration({ kind: "PROFESSIONAL", mobile: cleanedMobile });
+      router.push({
+        pathname: "/verify-otp",
+        params: { identifier: cleanedMobile, purpose: "PROFESSIONAL_REGISTRATION", professionalType: selectedType },
+      });
+    } catch (error) {
+      Alert.alert("Registration failed", normalizeApiError(error).message);
+    }
   };
 
   return (
@@ -119,10 +140,17 @@ export default function RegisterProfessionalScreen() {
           <View style={styles.spacer} />
         </View>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={0}
         >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+          >
           <View style={styles.iconContainer}>
             <Ionicons
               name="briefcase-outline"
@@ -231,6 +259,18 @@ export default function RegisterProfessionalScreen() {
             />
           </View>
 
+          <Text style={styles.label}>Email address</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Enter your email address"
+            placeholderTextColor="#94A3B8"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.input}
+          />
+
           <Text style={styles.sectionTitle}>
             Professional details
           </Text>
@@ -308,7 +348,8 @@ export default function RegisterProfessionalScreen() {
               color="#FFFFFF"
             />
           </TouchableOpacity>
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </SafeAreaView>
   );
@@ -321,6 +362,10 @@ const styles = StyleSheet.create({
   },
 
   container: {
+    flex: 1,
+  },
+
+  keyboardAvoidingView: {
     flex: 1,
   },
 
@@ -355,7 +400,7 @@ const styles = StyleSheet.create({
 
   content: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 180,
   },
 
   iconContainer: {
