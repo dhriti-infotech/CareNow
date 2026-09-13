@@ -1,26 +1,212 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import {
+  getPatientRequests,
+  type NurseServiceRequestStatus,
+  type PatientServiceRequest,
+} from "../../api/patientRequests";
+
+const statusLabels: Record<NurseServiceRequestStatus, string> = {
+  SEARCHING: "Finding a nurse",
+  OFFERED: "Nurse notified",
+  ACCEPTED: "Nurse assigned",
+  EN_ROUTE: "Nurse is on the way",
+  ARRIVED: "Nurse has arrived",
+  IN_SERVICE: "Service in progress",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
+
+const statusColors: Record<NurseServiceRequestStatus, string> = {
+  SEARCHING: "#1D4ED8",
+  OFFERED: "#1D4ED8",
+  ACCEPTED: "#15803D",
+  EN_ROUTE: "#15803D",
+  ARRIVED: "#15803D",
+  IN_SERVICE: "#15803D",
+  COMPLETED: "#475569",
+  CANCELLED: "#B91C1C",
+};
+
 export default function OrdersScreen() {
+  const [requests, setRequests] = useState<PatientServiceRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadRequests = useCallback(async (isRefresh = false) => {
+    try {
+      setError(null);
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+
+      const data = await getPatientRequests();
+      setRequests(data);
+    } catch (err: any) {
+      console.warn("Unable to load patient requests", err);
+      setError(err?.message ?? "Unable to load your requests.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  const refreshRequestsSilently = useCallback(async () => {
+    try {
+      const data = await getPatientRequests();
+      setRequests(data);
+    } catch (err) {
+      console.warn("Unable to refresh patient requests", err);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadRequests();
+    }, [loadRequests])
+  );
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      void refreshRequestsSilently();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [refreshRequestsSilently]);
+
+  const openRequest = (request: PatientServiceRequest) => {
+    router.push({
+      pathname: "/nurse-request-submitted",
+      params: {
+        requestId: request.requestId,
+        patientName: request.patientName,
+        serviceType: request.serviceType,
+        careType: request.serviceType,
+        urgency: request.priority === "URGENT" ? "asap" : "scheduled",
+      },
+    });
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.loadingText}>Loading your requests...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (requests.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="clipboard-outline" size={36} color="#2563EB" />
+          </View>
+
+          <Text style={styles.title}>Your Requests & Orders</Text>
+
+          <Text style={styles.subtitle}>
+            Your healthcare service requests, medicine orders,
+            and equipment orders will appear here.
+          </Text>
+
+          {error && <Text style={styles.errorText}>{error}</Text>}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons
-            name="clipboard-outline"
-            size={36}
-            color="#2563EB"
+      <ScrollView
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void loadRequests(true)}
+            tintColor="#2563EB"
           />
-        </View>
-
-        <Text style={styles.title}>Your Requests & Orders</Text>
-
-        <Text style={styles.subtitle}>
-          Your healthcare service requests, medicine orders,
-          and equipment orders will appear here.
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.pageTitle}>Your Requests & Orders</Text>
+        <Text style={styles.pageSubtitle}>
+          Track your healthcare service requests and orders.
         </Text>
-      </View>
+
+        {requests.map((request) => (
+          <TouchableOpacity
+            key={request.requestId}
+            style={styles.requestCard}
+            activeOpacity={0.85}
+            onPress={() => openRequest(request)}
+          >
+            <View style={styles.requestTopRow}>
+              <View style={styles.requestIcon}>
+                <Ionicons name="medical-outline" size={23} color="#2563EB" />
+              </View>
+
+              <View style={styles.requestMain}>
+                <Text style={styles.serviceType} numberOfLines={1}>
+                  {request.serviceType}
+                </Text>
+                <Text style={styles.patientName} numberOfLines={1}>
+                  {request.patientName}
+                </Text>
+              </View>
+
+              <Ionicons name="chevron-forward" size={21} color="#94A3B8" />
+            </View>
+
+            <View style={styles.requestDivider} />
+
+            <View style={styles.requestBottomRow}>
+              <View style={styles.statusBadge}>
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: statusColors[request.status] },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statusText,
+                    { color: statusColors[request.status] },
+                  ]}
+                >
+                  {statusLabels[request.status]}
+                </Text>
+              </View>
+
+              <Text style={styles.price}>₹{request.offeredPrice.toFixed(0)}</Text>
+            </View>
+
+            {request.status === "ACCEPTED" && request.professionalName && (
+              <View style={styles.assignedRow}>
+                <Ionicons name="person-circle-outline" size={18} color="#15803D" />
+                <Text style={styles.assignedText}>
+                  Assigned to {request.professionalName}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -61,5 +247,132 @@ const styles = StyleSheet.create({
     color: "#64748B",
     textAlign: "center",
     lineHeight: 20,
+  },
+
+  loadingText: {
+    marginTop: 12,
+    fontSize: 13,
+    color: "#64748B",
+  },
+
+  errorText: {
+    marginTop: 18,
+    fontSize: 12,
+    color: "#B91C1C",
+    textAlign: "center",
+  },
+
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 30,
+  },
+
+  pageTitle: {
+    fontSize: 23,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+
+  pageSubtitle: {
+    marginTop: 7,
+    marginBottom: 20,
+    fontSize: 13,
+    color: "#64748B",
+  },
+
+  requestCard: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 15,
+    marginBottom: 12,
+  },
+
+  requestTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  requestIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  requestMain: {
+    flex: 1,
+  },
+
+  serviceType: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#1E293B",
+  },
+
+  patientName: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#64748B",
+  },
+
+  requestDivider: {
+    height: 1,
+    backgroundColor: "#F1F5F9",
+    marginVertical: 13,
+  },
+
+  requestBottomRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+
+  statusText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  price: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#1E293B",
+  },
+
+  assignedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 11,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#DCFCE7",
+  },
+
+  assignedText: {
+    marginLeft: 6,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#15803D",
   },
 });

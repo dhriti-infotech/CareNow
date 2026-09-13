@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { createNurseRequest } from "../api/patientRequests";
+
 const careOptions = [
   {
     id: "general",
@@ -39,6 +41,8 @@ const careOptions = [
     icon: "bandage-outline" as const,
   },
 ];
+
+const DEFAULT_NURSE_REQUEST_PRICE = 500;
 
 export default function RequestNurseScreen() {
   const [selectedCare, setSelectedCare] = useState("general");
@@ -135,42 +139,7 @@ export default function RequestNurseScreen() {
   }
 };
 
-//   const handleRequest = () => {
-//     if (!patientName.trim()) {
-//       Alert.alert(
-//         "Patient name required",
-//         "Please enter the patient's name."
-//       );
-//       return;
-//     }
-
-//     if (!patientAge.trim()) {
-//       Alert.alert(
-//         "Patient age required",
-//         "Please enter the patient's age."
-//       );
-//       return;
-//     }
-
-//     if (!address.trim()) {
-//       Alert.alert(
-//         "Address required",
-//         "Please enter the patient's address or village."
-//       );
-//       return;
-//     }
-
-//     router.push({
-//       pathname: "/nurse-request-submitted",
-//       params: {
-//         patientName,
-//         careType: selectedCare,
-//         urgency,
-//       },
-//     });
-//   };
-
-const handleRequest = () => {
+  const handleRequest = async () => {
   if (!patientName.trim()) {
     Alert.alert(
       "Patient name required",
@@ -183,6 +152,23 @@ const handleRequest = () => {
     Alert.alert(
       "Patient age required",
       "Please enter the patient's age."
+    );
+    return;
+  }
+
+  const parsedAge = Number(patientAge);
+  if (!Number.isInteger(parsedAge) || parsedAge < 0 || parsedAge > 150) {
+    Alert.alert(
+      "Invalid patient age",
+      "Please enter a valid patient age."
+    );
+    return;
+  }
+
+  if (urgency === "scheduled") {
+    Alert.alert(
+      "Scheduling unavailable",
+      "Scheduling for later is not available yet. Please select As soon as possible."
     );
     return;
   }
@@ -203,21 +189,63 @@ const handleRequest = () => {
     return;
   }
 
-  router.push({
-    pathname: "/nurse-request-submitted",
-    params: {
-      patientName,
-      careType: selectedCare,
-      urgency,
-      latitude: latitude?.toString() ?? "",
-      longitude: longitude?.toString() ?? "",
-      houseNumber,
-      address,
-      landmark,
-      directions,
-      notes,
-    },
-  });
+  if (latitude === null || longitude === null) {
+    Alert.alert(
+      "Current location required",
+      "Please use your current location so we can find a nurse near the patient."
+    );
+    return;
+  }
+
+  const selectedCareOption =
+    careOptions.find((option) => option.id === selectedCare) ?? careOptions[0];
+
+  const locationAddress = [
+    houseNumber,
+    address || detectedAddress,
+    landmark,
+    directions,
+  ]
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(", ");
+
+  if (!locationAddress) {
+    Alert.alert(
+      "Patient location required",
+      "Please provide the patient's address."
+    );
+    return;
+  }
+
+  try {
+    const request = await createNurseRequest({
+      serviceType: selectedCareOption.title,
+      patientName: patientName.trim(),
+      patientAge: parsedAge,
+      locationAddress,
+      latitude,
+      longitude,
+      offeredPrice: DEFAULT_NURSE_REQUEST_PRICE,
+      priority: urgency === "asap" ? "URGENT" : "NORMAL",
+      notes: notes.trim() || undefined,
+    });
+
+    router.replace({
+      pathname: "/nurse-request-submitted",
+      params: {
+        requestId: request.requestId,
+        patientName: request.patientName,
+        careType: selectedCare,
+        urgency,
+      },
+    });
+  } catch (error: any) {
+    Alert.alert(
+      "Request failed",
+      error?.message ?? "We couldn't submit your nurse request. Please try again."
+    );
+  }
 };
 
   return (

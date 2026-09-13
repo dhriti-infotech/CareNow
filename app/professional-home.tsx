@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
+import * as Location from "expo-location";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +16,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppUser, getSession } from "../services/auth";
 
 import { useAuth } from "../context/auth-context";
+import {
+  acceptNurseRequest,
+  getNurseProfile,
+  getNurseRequests,
+  updateNurseAvailability,
+  type NurseAvailabilityStatus,
+  type NurseProfile,
+} from "../api/professionalRequests";
 
 import {
   developmentProfessionalStats,
@@ -37,6 +47,9 @@ export default function ProfessionalHomeScreen() {
   >("PENDING");
 
   const [loading, setLoading] = useState(true);
+  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
+  const [nurseProfile, setNurseProfile] = useState<NurseProfile | null>(null);
+  const [availabilityUpdating, setAvailabilityUpdating] = useState(false);
 
   /*
    * Load the logged-in professional.
@@ -78,8 +91,26 @@ export default function ProfessionalHomeScreen() {
 
       if (activeUser.status === "APPROVED") {
         setStatus("APPROVED");
-        setLoading(false);
 
+        const activeProfessionalType = activeUser.professionalType;
+        const isNurseServiceProfessional =
+          activeProfessionalType === "NURSE" ||
+          activeProfessionalType === "HEALTHCARE_WORKER" ||
+          activeProfessionalType === "HEALTH_WORKER";
+
+        if (isNurseServiceProfessional) {
+          try {
+            const profile = await getNurseProfile();
+            setNurseProfile(profile);
+
+            const requests = await getNurseRequests();
+            setServiceRequests(requests.map(mapNurseRequest));
+          } catch (error: any) {
+            console.warn("Unable to load nurse profile/service requests", error);
+          }
+        }
+
+        setLoading(false);
         return;
       }
 
@@ -98,6 +129,29 @@ export default function ProfessionalHomeScreen() {
       }
     };
   }, [authUser]);
+
+  // Keep the nurse request list current while the dashboard is open.
+  // This allows a newly-created patient request to appear without requiring
+  // the nurse to leave and reopen the dashboard.
+  useEffect(() => {
+    if (!approvedStatus(status) || nurseProfile?.availabilityStatus !== "AVAILABLE") return;
+
+    let cancelled = false;
+    const refreshRequests = async () => {
+      try {
+        const requests = await getNurseRequests();
+        if (!cancelled) setServiceRequests(requests.map(mapNurseRequest));
+      } catch (error) {
+        console.warn("Unable to refresh nurse service requests", error);
+      }
+    };
+
+    const interval = setInterval(refreshRequests, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [status, nurseProfile?.availabilityStatus]);
 
   /*
    * Loading screen
@@ -134,7 +188,8 @@ export default function ProfessionalHomeScreen() {
 
   const isServiceProfessional =
     professionalType === "NURSE" ||
-    professionalType === "HEALTH_WORKER";
+    professionalType === "HEALTH_WORKER" ||
+    professionalType === "HEALTHCARE_WORKER";
 
   /*
    * Get profession-specific sample statistics.
@@ -181,6 +236,50 @@ export default function ProfessionalHomeScreen() {
             100
         )
       : 0;
+
+  const handleAvailabilityChange = async (nextStatus: NurseAvailabilityStatus) => {
+    if (!nurseProfile || availabilityUpdating || nurseProfile.availabilityStatus === nextStatus) return;
+
+    setAvailabilityUpdating(true);
+    try {
+      let latitude = toNumber(nurseProfile.latitude);
+      let longitude = toNumber(nurseProfile.longitude);
+
+      // AVAILABLE nurses must have coordinates so the backend can match them to requests.
+      // Reuse the saved coordinates when present; otherwise use the device's current location.
+      if (nextStatus === "AVAILABLE" && (latitude == null || longitude == null)) {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (permission.status !== Location.PermissionStatus.GRANTED) {
+          Alert.alert("Location required", "Please allow location access so CareNow can match nearby service requests.");
+          return;
+        }
+
+        const position = await Location.getCurrentPositionAsync({});
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+      }
+
+      const updated = await updateNurseAvailability({
+        availabilityStatus: nextStatus,
+        latitude,
+        longitude,
+        serviceRadiusKm: toNumber(nurseProfile.serviceRadiusKm) ?? 10,
+      });
+
+      setNurseProfile(updated);
+
+      if (nextStatus === "AVAILABLE") {
+        const requests = await getNurseRequests();
+        setServiceRequests(requests.map(mapNurseRequest));
+      } else {
+        setServiceRequests([]);
+      }
+    } catch (error: any) {
+      Alert.alert("Unable to update availability", error?.message ?? "Please try again.");
+    } finally {
+      setAvailabilityUpdating(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -238,38 +337,63 @@ export default function ProfessionalHomeScreen() {
 
         {approved && (
           <View style={styles.availabilityCard}>
-            <View
-              style={styles.availabilityLeft}
-            >
-              <View
-                style={styles.onlineDot}
-              />
+            <View style={styles.availabilityHeader}>
+              <View style={styles.availabilityLeft}>
+                <View
+                  style={[
+                    styles.onlineDot,
+                    availabilityDotStyle(nurseProfile?.availabilityStatus),
+                  ]}
+                />
 
-              <View>
-                <Text
-                  style={
-                    styles.availabilityTitle
-                  }
-                >
-                  You are Available
-                </Text>
+                <View>
+                  <Text style={styles.availabilityTitle}>
+                    {availabilityTitle(nurseProfile?.availabilityStatus)}
+                  </Text>
 
-                <Text
-                  style={
-                    styles.availabilitySubtitle
-                  }
-                >
-                  Ready to receive service
-                  requests
-                </Text>
+                  <Text style={styles.availabilitySubtitle}>
+                    {availabilitySubtitle(nurseProfile?.availabilityStatus)}
+                  </Text>
+                </View>
               </View>
+
+              <Ionicons
+                name={availabilityIcon(nurseProfile?.availabilityStatus)}
+                size={20}
+                color={availabilityColor(nurseProfile?.availabilityStatus)}
+              />
             </View>
 
-            <Ionicons
-              name="checkmark-circle"
-              size={20}
-              color="#16A34A"
-            />
+            <View style={styles.availabilityToggle}>
+              {(["AVAILABLE", "OFFLINE", "BUSY"] as NurseAvailabilityStatus[]).map((option) => {
+                const selected = nurseProfile?.availabilityStatus === option;
+                return (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.availabilityOption,
+                      selected && styles.availabilityOptionSelected,
+                    ]}
+                    activeOpacity={0.8}
+                    disabled={availabilityUpdating}
+                    onPress={() => handleAvailabilityChange(option)}
+                  >
+                    {availabilityUpdating && selected ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.availabilityOptionText,
+                          selected && styles.availabilityOptionTextSelected,
+                        ]}
+                      >
+                        {availabilityLabel(option)}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         )}
 
@@ -562,12 +686,28 @@ export default function ProfessionalHomeScreen() {
                 title="New Service Requests"
               />
 
-              {developmentServiceRequests
+              {serviceRequests
                 .slice(0, 3)
                 .map((request) => (
                   <ServiceRequestCard
                     key={request.id}
                     request={request}
+                    onAccept={async () => {
+                      try {
+                        await acceptNurseRequest(request.id);
+                        const refreshed = await getNurseRequests();
+                        setServiceRequests(refreshed.map(mapNurseRequest));
+                        Alert.alert(
+                          "Request accepted",
+                          "The patient request has been assigned to you."
+                        );
+                      } catch (error: any) {
+                        Alert.alert(
+                          "Unable to accept request",
+                          error?.message ?? "This request is no longer available."
+                        );
+                      }
+                    }}
                   />
                 ))}
             </>
@@ -862,10 +1002,53 @@ function ProgressBar({
 /* SERVICE REQUEST CARD */
 /* ========================================================= */
 
+function mapNurseRequest(request: {
+  requestId: string;
+  patientName: string;
+  serviceType: string;
+  distanceKm?: number | null;
+  offeredPrice: number;
+  requestedAt: string;
+  priority: "NORMAL" | "URGENT";
+}): ServiceRequest {
+  return {
+    id: request.requestId,
+    serviceType: request.serviceType,
+    patientName: request.patientName,
+    distance:
+      request.distanceKm == null
+        ? "Distance unavailable"
+        : `${request.distanceKm.toFixed(1)} km`,
+    requestedAt: formatRequestTime(request.requestedAt),
+    offeredPrice: request.offeredPrice,
+    priority: request.priority,
+  };
+}
+
+function formatRequestTime(value: string) {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return value;
+
+  const minutes = Math.max(
+    0,
+    Math.floor((Date.now() - timestamp) / 60000)
+  );
+
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+
+  return `${Math.floor(hours / 24)} day ago`;
+}
+
 function ServiceRequestCard({
   request,
+  onAccept,
 }: {
   request: ServiceRequest;
+  onAccept: () => Promise<void>;
 }) {
   const urgent =
     request.priority === "URGENT";
@@ -947,7 +1130,9 @@ function ServiceRequestCard({
         <TouchableOpacity
           style={styles.acceptButton}
           activeOpacity={0.8}
-          onPress={() => {}}
+          onPress={() => {
+            void onAccept();
+          }}
         >
           <Text
             style={
@@ -1112,6 +1297,60 @@ function RequestDetail({
 /* PROFESSIONAL TYPE */
 /* ========================================================= */
 
+function approvedStatus(value: "PENDING" | "APPROVED") {
+  return value === "APPROVED";
+}
+
+function toNumber(value?: number | string | null) {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function availabilityLabel(status?: NurseAvailabilityStatus) {
+  switch (status) {
+    case "AVAILABLE": return "Online";
+    case "BUSY": return "Busy";
+    default: return "Offline";
+  }
+}
+
+function availabilityTitle(status?: NurseAvailabilityStatus) {
+  switch (status) {
+    case "AVAILABLE": return "You are Available";
+    case "BUSY": return "You are Busy";
+    default: return "You are Offline";
+  }
+}
+
+function availabilitySubtitle(status?: NurseAvailabilityStatus) {
+  switch (status) {
+    case "AVAILABLE": return "Ready to receive service requests";
+    case "BUSY": return "Not available for new service requests";
+    default: return "You will not receive new service requests";
+  }
+}
+
+function availabilityColor(status?: NurseAvailabilityStatus) {
+  switch (status) {
+    case "AVAILABLE": return "#16A34A";
+    case "BUSY": return "#F59E0B";
+    default: return "#64748B";
+  }
+}
+
+function availabilityDotStyle(status?: NurseAvailabilityStatus) {
+  return { backgroundColor: availabilityColor(status) };
+}
+
+function availabilityIcon(status?: NurseAvailabilityStatus): keyof typeof Ionicons.glyphMap {
+  switch (status) {
+    case "AVAILABLE": return "checkmark-circle";
+    case "BUSY": return "pause-circle";
+    default: return "ellipse-outline";
+  }
+}
+
 function formatProfessionalType(
   type: ProfessionalType
 ) {
@@ -1120,6 +1359,7 @@ function formatProfessionalType(
       return "Nurse";
 
     case "HEALTH_WORKER":
+    case "HEALTHCARE_WORKER":
       return "Health Worker";
 
     case "PHARMACIST":
@@ -1212,9 +1452,13 @@ const styles = StyleSheet.create({
     borderColor: "#BBF7D0",
     borderRadius: 13,
     padding: 13,
+  },
+
+  availabilityHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    width: "100%",
   },
 
   availabilityLeft: {
@@ -1240,6 +1484,38 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#166534",
     marginTop: 3,
+  },
+
+  availabilityToggle: {
+    flexDirection: "row",
+    alignSelf: "stretch",
+    marginTop: 10,
+    backgroundColor: "#E2E8F0",
+    borderRadius: 10,
+    padding: 3,
+  },
+
+  availabilityOption: {
+    flex: 1,
+    minHeight: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 7,
+  },
+
+  availabilityOptionSelected: {
+    backgroundColor: "#2563EB",
+  },
+
+  availabilityOptionText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#475569",
+  },
+
+  availabilityOptionTextSelected: {
+    color: "#FFFFFF",
   },
 
   /* Pending */

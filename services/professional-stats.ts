@@ -1,6 +1,7 @@
 export type ProfessionalType =
   | "NURSE"
   | "HEALTH_WORKER"
+  | "HEALTHCARE_WORKER"
   | "PHARMACIST";
 
 /**

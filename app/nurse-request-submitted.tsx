@@ -1,12 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
+    Alert,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import {
+  getPatientRequest,
+  getPatientRequestOffers,
+  type PatientNurseOffer,
+  type NurseServiceRequestStatus,
+} from "../api/patientRequests";
 
 const careNames: Record<string, string> = {
   general: "General Nursing Care",
@@ -16,17 +25,110 @@ const careNames: Record<string, string> = {
 };
 
 export default function NurseRequestSubmittedScreen() {
-  const { patientName, careType, urgency } =
+  const { patientName, careType, serviceType, urgency, requestId } =
     useLocalSearchParams<{
       patientName?: string;
       careType?: string;
+      serviceType?: string;
       urgency?: string;
+      requestId?: string;
     }>();
 
+  const [requestStatus, setRequestStatus] =
+    useState<NurseServiceRequestStatus>("SEARCHING");
+  const [assignedProfessionalName, setAssignedProfessionalName] =
+    useState<string | null>(null);
+  const [offers, setOffers] = useState<PatientNurseOffer[]>([]);
+  const acceptedNotifiedRef = useRef(false);
+
   const careName =
-    careNames[careType ?? ""] ?? "Nursing Care";
+    serviceType || careNames[careType ?? ""] || "Nursing Care";
 
   const isAsap = urgency === "asap";
+
+  useEffect(() => {
+    if (!requestId) return;
+
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let previousStatus: NurseServiceRequestStatus | null = null;
+
+    const refresh = async () => {
+      try {
+        const request = await getPatientRequest(requestId);
+        if (!active) return;
+
+        const statusChangedToAccepted =
+          previousStatus !== null &&
+          previousStatus !== "ACCEPTED" &&
+          request.status === "ACCEPTED";
+        previousStatus = request.status;
+
+        setRequestStatus(request.status);
+        setAssignedProfessionalName(request.professionalName ?? null);
+
+        if (
+          statusChangedToAccepted &&
+          !acceptedNotifiedRef.current
+        ) {
+          acceptedNotifiedRef.current = true;
+          Alert.alert(
+            "Nurse assigned",
+            request.professionalName
+              ? `${request.professionalName} has accepted your request.`
+              : "A nurse has accepted your request."
+          );
+        }
+
+        if (
+          request.status === "SEARCHING" ||
+          request.status === "OFFERED"
+        ) {
+          const currentOffers = await getPatientRequestOffers(requestId);
+          if (active) setOffers(currentOffers);
+        }
+
+        if (
+          request.status === "SEARCHING" ||
+          request.status === "OFFERED"
+        ) {
+          timer = setTimeout(refresh, 5000);
+        }
+      } catch (error) {
+        console.warn("Unable to refresh nurse request status", error);
+      }
+    };
+
+    void refresh();
+
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [requestId]);
+
+  const statusLabel = (() => {
+    switch (requestStatus) {
+      case "OFFERED":
+        return `${offers.length} nurse${offers.length === 1 ? "" : "s"} notified`;
+      case "ACCEPTED":
+        return assignedProfessionalName
+          ? `Nurse assigned: ${assignedProfessionalName}`
+          : "Nurse assigned";
+      case "EN_ROUTE":
+        return "Nurse is on the way";
+      case "ARRIVED":
+        return "Nurse has arrived";
+      case "IN_SERVICE":
+        return "Service in progress";
+      case "COMPLETED":
+        return "Service completed";
+      case "CANCELLED":
+        return "Request cancelled";
+      default:
+        return "Finding a nurse";
+    }
+  })();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -84,7 +186,7 @@ export default function NurseRequestSubmittedScreen() {
                 <View style={styles.statusDot} />
 
                 <Text style={styles.statusText}>
-                  Finding a nurse
+                  {statusLabel}
                 </Text>
               </View>
             </View>
