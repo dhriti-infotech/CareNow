@@ -129,7 +129,7 @@ export default function RegisterProfessionalScreen() {
             <Ionicons
               name="arrow-back"
               size={22}
-              color="#0F172A"
+              color="#101828"
             />
           </TouchableOpacity>
 
@@ -155,7 +155,7 @@ export default function RegisterProfessionalScreen() {
             <Ionicons
               name="briefcase-outline"
               size={32}
-              color="#2563EB"
+              color="#0A9FB5"
             />
           </View>
 
@@ -198,7 +198,7 @@ export default function RegisterProfessionalScreen() {
                     <Ionicons
                       name={type.icon}
                       size={22}
-                      color="#2563EB"
+                      color="#0A9FB5"
                     />
                   </View>
 
@@ -317,7 +317,7 @@ export default function RegisterProfessionalScreen() {
             <Ionicons
               name="shield-checkmark-outline"
               size={22}
-              color="#2563EB"
+              color="#0A9FB5"
             />
 
             <View style={styles.verificationContent}>
@@ -358,7 +358,7 @@ export default function RegisterProfessionalScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F6FAFB",
   },
 
   container: {
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     height: 58,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: "#F0F2F5",
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 16,
     fontWeight: "800",
-    color: "#0F172A",
+    color: "#101828",
   },
 
   spacer: {
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#EAF9FC",
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 23,
     fontWeight: "800",
-    color: "#0F172A",
+    color: "#101828",
     textAlign: "center",
     marginTop: 16,
   },
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     lineHeight: 19,
-    color: "#64748B",
+    color: "#667085",
     textAlign: "center",
     marginTop: 6,
   },
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: "800",
-    color: "#0F172A",
+    color: "#101828",
     marginTop: 25,
     marginBottom: 11,
   },
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     minHeight: 66,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#F0F2F5",
     borderRadius: 12,
     paddingHorizontal: 11,
     flexDirection: "row",
@@ -454,28 +454,28 @@ const styles = StyleSheet.create({
   },
 
   selectedTypeCard: {
-    borderColor: "#2563EB",
-    backgroundColor: "#F8FBFF",
+    borderColor: "#0A9FB5",
+    backgroundColor: "#F6FCFD",
   },
 
   typeIcon: {
     width: 43,
     height: 43,
     borderRadius: 22,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#EAF9FC",
     alignItems: "center",
     justifyContent: "center",
   },
 
   selectedTypeIcon: {
-    backgroundColor: "#DBEAFE",
+    backgroundColor: "#D5F1F4",
   },
 
   typeTitle: {
     flex: 1,
     fontSize: 13,
     fontWeight: "700",
-    color: "#1E293B",
+    color: "#344054",
     marginLeft: 11,
   },
 
@@ -484,38 +484,38 @@ const styles = StyleSheet.create({
     height: 21,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#CBD5E1",
+    borderColor: "#D0D5DD",
     alignItems: "center",
     justifyContent: "center",
   },
 
   radioSelected: {
-    borderColor: "#2563EB",
+    borderColor: "#0A9FB5",
   },
 
   radioDot: {
     width: 11,
     height: 11,
     borderRadius: 6,
-    backgroundColor: "#2563EB",
+    backgroundColor: "#0A9FB5",
   },
 
   label: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#334155",
+    color: "#344054",
     marginBottom: 7,
   },
 
   input: {
     height: 51,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: "#D0D5DD",
     borderRadius: 11,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 13,
     fontSize: 13,
-    color: "#0F172A",
+    color: "#101828",
     marginBottom: 15,
   },
 
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     height: 51,
     flexDirection: "row",
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: "#D0D5DD",
     borderRadius: 11,
     overflow: "hidden",
     backgroundColor: "#FFFFFF",
@@ -540,26 +540,26 @@ const styles = StyleSheet.create({
     width: 62,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F6FAFB",
     borderRightWidth: 1,
-    borderRightColor: "#E2E8F0",
+    borderRightColor: "#F0F2F5",
   },
 
   countryCodeText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#334155",
+    color: "#344054",
   },
 
   phoneInput: {
     flex: 1,
     paddingHorizontal: 13,
     fontSize: 14,
-    color: "#0F172A",
+    color: "#101828",
   },
 
   verificationCard: {
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#EAF9FC",
     borderRadius: 13,
     padding: 14,
     flexDirection: "row",
@@ -575,24 +575,29 @@ const styles = StyleSheet.create({
   verificationTitle: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#1E40AF",
+    color: "#087F91",
   },
 
   verificationText: {
     fontSize: 11,
     lineHeight: 17,
-    color: "#1E40AF",
+    color: "#087F91",
     marginTop: 3,
   },
 
   button: {
     height: 52,
     borderRadius: 11,
-    backgroundColor: "#2563EB",
+    backgroundColor: "#0A9FB5",
     marginTop: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#0A9FB5",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   buttonText: {

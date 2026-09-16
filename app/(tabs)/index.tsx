@@ -71,7 +71,7 @@ export default function HomeScreen() {
           <View style={styles.header}>
             <View style={styles.locationContainer}>
               <View style={styles.locationIcon}>
-                <Ionicons name="location" size={19} color="#2563EB" />
+                <Ionicons name="location" size={19} color="#0A9FB5" />
               </View>
 
               <View>
@@ -81,7 +81,7 @@ export default function HomeScreen() {
                   <Ionicons
                     name="chevron-down"
                     size={14}
-                    color="#475569"
+                    color="#526973"
                   />
                 </View>
               </View>
@@ -92,7 +92,7 @@ export default function HomeScreen() {
               onPress={() => router.push("/(tabs)/profile")}
               activeOpacity={0.8}
             >
-              <Ionicons name="person-outline" size={20} color="#1E293B" />
+              <Ionicons name="person-outline" size={20} color="#182A33" />
             </TouchableOpacity>
           </View>
 
@@ -106,7 +106,7 @@ export default function HomeScreen() {
 
           {/* Search */}
           <TouchableOpacity style={styles.searchBox}>
-            <Ionicons name="search-outline" size={21} color="#64748B" />
+            <Ionicons name="search-outline" size={21} color="#687F89" />
 
             <Text style={styles.searchText}>
               Search for a service
@@ -130,7 +130,7 @@ export default function HomeScreen() {
                   <Ionicons
                     name={service.icon}
                     size={27}
-                    color="#2563EB"
+                    color="#0A9FB5"
                   />
                 </View>
 
@@ -194,7 +194,7 @@ export default function HomeScreen() {
                   <Ionicons
                     name={service.icon}
                     size={20}
-                    color="#2563EB"
+                    color="#0A9FB5"
                   />
                 </View>
 
@@ -205,7 +205,7 @@ export default function HomeScreen() {
                 <Ionicons
                   name="chevron-forward"
                   size={17}
-                  color="#94A3B8"
+                  color="#91A6AE"
                 />
               </TouchableOpacity>
             ))}
@@ -238,12 +238,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F7FBFC",
   },
 
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F7FBFC",
   },
 
   scrollContent: {
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#EAF9FC",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 9,
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
 
   locationLabel: {
     fontSize: 11,
-    color: "#64748B",
+    color: "#687F89",
     marginBottom: 2,
   },
 
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1E293B",
+    color: "#182A33",
     marginRight: 3,
   },
 
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#D7E8EB",
   },
 
   greeting: {
@@ -311,12 +311,12 @@ const styles = StyleSheet.create({
   greetingTitle: {
     fontSize: 25,
     fontWeight: "800",
-    color: "#0F172A",
+    color: "#10242C",
   },
 
   greetingSubtitle: {
     fontSize: 14,
-    color: "#64748B",
+    color: "#687F89",
     marginTop: 4,
   },
 
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#D7E8EB",
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 15,
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
 
   searchText: {
     fontSize: 14,
-    color: "#94A3B8",
+    color: "#91A6AE",
     marginLeft: 10,
   },
 
@@ -348,13 +348,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#0F172A",
+    color: "#10242C",
   },
 
   viewAll: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#2563EB",
+    color: "#0A9FB5",
   },
 
   serviceGrid: {
@@ -371,14 +371,14 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#D7E8EB",
   },
 
   serviceIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#EAF9FC",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 11,
@@ -387,18 +387,18 @@ const styles = StyleSheet.create({
   serviceTitle: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#1E293B",
+    color: "#182A33",
     lineHeight: 19,
   },
 
   serviceSubtitle: {
     fontSize: 11,
-    color: "#64748B",
+    color: "#687F89",
     marginTop: 4,
   },
 
   urgentCard: {
-    backgroundColor: "#2563EB",
+    backgroundColor: "#0A9FB5",
     borderRadius: 16,
     padding: 15,
     flexDirection: "row",
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
   },
 
   urgentSubtitle: {
-    color: "#DBEAFE",
+    color: "#D5F1F4",
     fontSize: 11,
     marginTop: 3,
   },
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#D7E8EB",
     overflow: "hidden",
     marginBottom: 20,
   },
@@ -456,14 +456,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 13,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: "#EEF6F7",
   },
 
   popularIcon: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#EAF9FC",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 11,
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: "600",
-    color: "#334155",
+    color: "#344B55",
   },
 
   trustCard: {

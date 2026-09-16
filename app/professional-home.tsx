@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import * as Location from "expo-location";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,15 +16,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppUser, getSession } from "../services/auth";
 
-import { useAuth } from "../context/auth-context";
 import {
-  acceptNurseRequest,
   getNurseProfile,
   getNurseRequests,
   updateNurseAvailability,
   type NurseAvailabilityStatus,
-  type NurseProfile,
+  type NurseProfile
 } from "../api/professionalRequests";
+import { useAuth } from "../context/auth-context";
 
 import {
   developmentProfessionalStats,
@@ -32,10 +32,9 @@ import {
 } from "../services/professional-stats";
 
 import {
-  developmentPrescriptionOrders,
   developmentServiceRequests,
   PrescriptionOrder,
-  ServiceRequest,
+  ServiceRequest
 } from "../services/professional-requests";
 
 export default function ProfessionalHomeScreen() {
@@ -162,7 +161,7 @@ export default function ProfessionalHomeScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator
             size="large"
-            color="#2563EB"
+            color="#0A9FB5"
           />
 
           <Text style={styles.loadingText}>
@@ -281,6 +280,11 @@ export default function ProfessionalHomeScreen() {
     }
   };
 
+  const displayName = user?.name || "Professional";
+  const activityRequests = serviceRequests.length > 0
+    ? serviceRequests.slice(0, 3)
+    : developmentServiceRequests.slice(0, 3);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -288,618 +292,218 @@ export default function ProfessionalHomeScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* ================================================= */}
-        {/* HEADER */}
-        {/* ================================================= */}
-
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={styles.greeting}>
-              Welcome back
-            </Text>
-
-            <Text
-              style={styles.name}
-              numberOfLines={1}
-            >
-              {user?.name || "Professional"}
-            </Text>
-
-            {professionalType && (
-              <Text style={styles.professionalType}>
-                {formatProfessionalType(
-                  professionalType
-                )}
-              </Text>
-            )}
+        {/* Header */}
+        <View style={styles.topHeader}>
+          <View style={styles.profileSummary}>
+            <View style={styles.avatarWrap}>
+              <Ionicons name="person" size={31} color="#0A9FB5" />
+            </View>
+            <View style={styles.headerIdentity}>
+              <Text style={styles.welcome}>Hi, {displayName}!</Text>
+              <View style={styles.onlineRow}>
+                <View style={[styles.onlineDot, availabilityDotStyle(nurseProfile?.availabilityStatus)]} />
+                <Text style={styles.onlineText}>{availabilityLabel(nurseProfile?.availabilityStatus)}</Text>
+              </View>
+              <Text style={styles.professionalType}>{formatProfessionalType(professionalType || "NURSE")}</Text>
+            </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.profileButton}
-            activeOpacity={0.8}
-            onPress={() =>
-              router.push(
-                "/professional-profile"
-              )
-            }
-          >
-            <Ionicons
-              name="person-outline"
-              size={22}
-              color="#FFFFFF"
-            />
+          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8} onPress={() => {}}>
+            <Ionicons name="notifications-outline" size={25} color="#173B46" />
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>{Math.min(activityRequests.length || 3, 9)}</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
-        {/* ================================================= */}
-        {/* AVAILABILITY */}
-        {/* ================================================= */}
-
+        {/* Availability */}
         {approved && (
           <View style={styles.availabilityCard}>
-            <View style={styles.availabilityHeader}>
-              <View style={styles.availabilityLeft}>
-                <View
-                  style={[
-                    styles.onlineDot,
-                    availabilityDotStyle(nurseProfile?.availabilityStatus),
-                  ]}
-                />
-
-                <View>
-                  <Text style={styles.availabilityTitle}>
-                    {availabilityTitle(nurseProfile?.availabilityStatus)}
-                  </Text>
-
-                  <Text style={styles.availabilitySubtitle}>
-                    {availabilitySubtitle(nurseProfile?.availabilityStatus)}
-                  </Text>
+            <View style={styles.availabilityTopRow}>
+              <View style={styles.availabilityCopy}>
+                <View style={styles.availableLine}>
+                  <View style={styles.availableDot} />
+                  <Text style={styles.availableTitle}>Available for new requests</Text>
                 </View>
               </View>
-
-              <Ionicons
-                name={availabilityIcon(nurseProfile?.availabilityStatus)}
-                size={20}
-                color={availabilityColor(nurseProfile?.availabilityStatus)}
-              />
-            </View>
-
-            <View style={styles.availabilityToggle}>
-              {(["AVAILABLE", "OFFLINE", "BUSY"] as NurseAvailabilityStatus[]).map((option) => {
-                const selected = nurseProfile?.availabilityStatus === option;
-                return (
-                  <TouchableOpacity
-                    key={option}
-                    style={[
-                      styles.availabilityOption,
-                      selected && styles.availabilityOptionSelected,
-                    ]}
-                    activeOpacity={0.8}
-                    disabled={availabilityUpdating}
-                    onPress={() => handleAvailabilityChange(option)}
-                  >
-                    {availabilityUpdating && selected ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.availabilityOptionText,
-                          selected && styles.availabilityOptionTextSelected,
-                        ]}
-                      >
-                        {availabilityLabel(option)}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+              <TouchableOpacity
+                style={[styles.bigSwitch, nurseProfile?.availabilityStatus !== "AVAILABLE" && styles.bigSwitchOff]}
+                activeOpacity={0.9}
+                disabled={availabilityUpdating}
+                onPress={() => handleAvailabilityChange(nurseProfile?.availabilityStatus === "AVAILABLE" ? "OFFLINE" : "AVAILABLE")}
+              >
+                <View style={[styles.switchThumb, nurseProfile?.availabilityStatus !== "AVAILABLE" && styles.switchThumbOff]} />
+              </TouchableOpacity>
             </View>
           </View>
         )}
-
-        {/* ================================================= */}
-        {/* PENDING VERIFICATION */}
-        {/* ================================================= */}
 
         {!approved && (
           <View style={styles.pendingCard}>
-            <View style={styles.pendingIcon}>
-              <Ionicons
-                name="time-outline"
-                size={22}
-                color="#B45309"
-              />
+            <Ionicons name="time-outline" size={22} color="#B45309" />
+            <View style={styles.pendingContent}>
+              <Text style={styles.pendingTitle}>Verification in progress</Text>
+              <Text style={styles.pendingSubtitle}>Your professional profile is being verified.</Text>
             </View>
-
-            <View
-              style={styles.pendingContent}
-            >
-              <Text
-                style={styles.pendingTitle}
-              >
-                Verification in progress
-              </Text>
-
-              <Text
-                style={
-                  styles.pendingSubtitle
-                }
-              >
-                Your professional profile is
-                being verified.
-              </Text>
-            </View>
-
-            <ActivityIndicator
-              size="small"
-              color="#F59E0B"
-            />
+            <ActivityIndicator size="small" color="#F59E0B" />
           </View>
         )}
 
-        {/* ================================================= */}
-        {/* EARNINGS */}
-        {/* ================================================= */}
-
-        <Text style={styles.sectionTitle}>
-          Earnings
-        </Text>
-
-        <View style={styles.earningsCard}>
-          <View style={styles.earningsIcon}>
-            <Ionicons
-              name="wallet-outline"
-              size={25}
-              color="#2563EB"
-            />
-          </View>
-
-          <View
-            style={styles.earningsContent}
-          >
-            <Text
-              style={styles.earningsLabel}
-            >
-              Lifetime Earnings
-            </Text>
-
-            <Text
-              style={styles.earningsAmount}
-            >
-              ₹
-              {dashboardStats.lifetimeEarnings.toLocaleString(
-                "en-IN"
-              )}
-            </Text>
-
-            <Text
-              style={
-                styles.earningsSubtext
-              }
-            >
-              Total earnings from completed
-              services
-            </Text>
-          </View>
+        {/* Four headline metrics */}
+        <View style={styles.metricGrid}>
+          <MetricCard icon="wallet-outline" value={`₹${dashboardStats.lifetimeEarnings.toLocaleString("en-IN")}`} label="Lifetime Earnings" tone="teal" />
+          <MetricCard icon="clipboard-outline" value={`${isPharmacist ? dashboardStats.ordersFulfilled ?? 0 : dashboardStats.servicesCompleted ?? 0}`} label="Services Provided" tone="teal" />
+          <MetricCard icon="star" value={dashboardStats.rating.toFixed(1)} label="Avg. Rating" tone="gold" />
+          <MetricCard icon="checkmark-circle-outline" value={`${isPharmacist ? fulfillmentRate : serviceCompletionRate}%`} label="Completion Rate" tone="blue" />
         </View>
 
-        {/* ================================================= */}
-        {/* NURSE / HEALTH WORKER */}
-        {/* ================================================= */}
+        {/* Today's Activity */}
+        <View style={styles.activityHeader}>
+          <Text style={styles.activityTitle}>Today's Activity</Text>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => {}} style={styles.viewAllRow}>
+            <Text style={styles.viewAllText}>View All</Text>
+            <Ionicons name="arrow-forward" size={17} color="#0A9FB5" />
+          </TouchableOpacity>
+        </View>
 
-        {isServiceProfessional && (
-          <>
-            <Text
-              style={styles.sectionTitle}
-            >
-              Service Activity
-            </Text>
-
-            <View style={styles.statsRow}>
-              <StatCard
-                icon="notifications-outline"
-                value={
-                  dashboardStats
-                    .requestsReceived ?? 0
-                }
-                label="Requests Received"
-              />
-
-              <View
-                style={styles.statsGap}
-              />
-
-              <StatCard
-                icon="checkmark-circle-outline"
-                value={
-                  dashboardStats
-                    .servicesCompleted ?? 0
-                }
-                label="Services Completed"
-              />
-            </View>
-
-            <View
-              style={styles.completionCard}
-            >
-              <View
-                style={styles.completionHeader}
-              >
-                <View
-                  style={
-                    styles.completionText
-                  }
-                >
-                  <Text
-                    style={
-                      styles.completionTitle
-                    }
-                  >
-                    Service Completion Rate
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.completionSubtitle
-                    }
-                  >
-                    Completed services vs
-                    received requests
-                  </Text>
-                </View>
-
-                <Text
-                  style={
-                    styles.completionPercentage
-                  }
-                >
-                  {serviceCompletionRate}%
-                </Text>
-              </View>
-
-              <ProgressBar
-                percentage={
-                  serviceCompletionRate
-                }
-              />
-            </View>
-          </>
-        )}
-
-        {/* ================================================= */}
-        {/* PHARMACIST */}
-        {/* ================================================= */}
-
-        {isPharmacist && (
-          <>
-            <Text
-              style={styles.sectionTitle}
-            >
-              Medicine Orders
-            </Text>
-
-            <View style={styles.statsRow}>
-              <StatCard
-                icon="receipt-outline"
-                value={
-                  dashboardStats
-                    .ordersReceived ?? 0
-                }
-                label="Orders Received"
-              />
-
-              <View
-                style={styles.statsGap}
-              />
-
-              <StatCard
-                icon="checkmark-circle-outline"
-                value={
-                  dashboardStats
-                    .ordersFulfilled ?? 0
-                }
-                label="Orders Fulfilled"
-              />
-            </View>
-
-            <View
-              style={styles.statsRowSecond}
-            >
-              <StatCard
-                icon="document-text-outline"
-                value={
-                  dashboardStats
-                    .prescriptionsReceived ?? 0
-                }
-                label="Prescriptions Received"
-              />
-
-              <View
-                style={styles.statsGap}
-              />
-
-              <StatCard
-                icon="checkmark-done-outline"
-                value={
-                  dashboardStats
-                    .ordersAccepted ?? 0
-                }
-                label="Orders Accepted"
-              />
-            </View>
-
-            <View
-              style={styles.completionCard}
-            >
-              <View
-                style={styles.completionHeader}
-              >
-                <View
-                  style={
-                    styles.completionText
-                  }
-                >
-                  <Text
-                    style={
-                      styles.completionTitle
-                    }
-                  >
-                    Order Fulfillment Rate
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.completionSubtitle
-                    }
-                  >
-                    Fulfilled orders vs
-                    received orders
-                  </Text>
-                </View>
-
-                <Text
-                  style={[
-                    styles.completionPercentage,
-                    styles.pharmacyPercentage,
-                  ]}
-                >
-                  {fulfillmentRate}%
-                </Text>
-              </View>
-
-              <ProgressBar
-                percentage={fulfillmentRate}
-                pharmacist
-              />
-            </View>
-          </>
-        )}
-
-        {/* ================================================= */}
-        {/* NEW SERVICE REQUESTS */}
-        {/* ================================================= */}
-
-        {approved &&
-          isServiceProfessional && (
-            <>
-              <SectionHeader
-                title="New Service Requests"
-              />
-
-              {serviceRequests
-                .slice(0, 3)
-                .map((request) => (
-                  <ServiceRequestCard
-                    key={request.id}
-                    request={request}
-                    onAccept={async () => {
-                      try {
-                        await acceptNurseRequest(request.id);
-                        const refreshed = await getNurseRequests();
-                        setServiceRequests(refreshed.map(mapNurseRequest));
-                        Alert.alert(
-                          "Request accepted",
-                          "The patient request has been assigned to you."
-                        );
-                      } catch (error: any) {
-                        Alert.alert(
-                          "Unable to accept request",
-                          error?.message ?? "This request is no longer available."
-                        );
-                      }
-                    }}
-                  />
-                ))}
-            </>
-          )}
-
-        {/* ================================================= */}
-        {/* NEW PRESCRIPTION ORDERS */}
-        {/* ================================================= */}
-
-        {approved && isPharmacist && (
-          <>
-            <SectionHeader
-              title="New Prescription Orders"
-            />
-
-            {developmentPrescriptionOrders
-              .slice(0, 3)
-              .map((order) => (
-                <PrescriptionOrderCard
-                  key={order.id}
-                  order={order}
-                />
-              ))}
-          </>
-        )}
-
-        {/* ================================================= */}
-        {/* RATING */}
-        {/* ================================================= */}
-
-        <Text style={styles.sectionTitle}>
-          Your Rating
-        </Text>
-
-        <View style={styles.ratingCard}>
-          <View style={styles.ratingScore}>
-            <Text
-              style={styles.ratingNumber}
-            >
-              {dashboardStats.rating.toFixed(
-                1
-              )}
-            </Text>
-
-            <View style={styles.stars}>
-              {Array.from({
-                length: 5,
-              }).map((_, index) => (
+        <View style={styles.activityList}>
+          {activityRequests.map((request, index) => (
+            <View key={request.id} style={styles.activityCard}>
+              <View style={styles.activityIcon}>
                 <Ionicons
-                  key={index}
-                  name={
-                    index <
-                    Math.round(
-                      dashboardStats.rating
-                    )
-                      ? "star"
-                      : "star-outline"
-                  }
-                  size={17}
-                  color="#F59E0B"
-                  style={styles.star}
+                  name={index === 0 ? "home-outline" : index === 1 ? "medkit-outline" : "pulse-outline"}
+                  size={23}
+                  color="#0A9FB5"
                 />
-              ))}
+              </View>
+              <View style={styles.activityInfo}>
+                <Text style={styles.activityService} numberOfLines={1}>{request.serviceType}</Text>
+                <Text style={styles.activityPatient} numberOfLines={1}>{request.patientName}</Text>
+                <Text style={styles.activityTime}>{request.requestedAt}</Text>
+              </View>
+              <View style={[styles.activityStatus, request.priority === "URGENT" ? styles.activityStatusUrgent : styles.activityStatusUpcoming]}>
+                <Text style={[styles.activityStatusText, request.priority === "URGENT" ? styles.activityStatusUrgentText : styles.activityStatusUpcomingText]}>
+                  {request.priority === "URGENT" ? "Urgent" : index === 0 ? "Accepted" : "Upcoming"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={19} color="#2D7481" />
             </View>
+          ))}
+        </View>
 
-            <Text
-              style={styles.ratingCount}
-            >
-              {dashboardStats.totalRatings}{" "}
-              ratings
-            </Text>
+        {/* CareNow banner */}
+        <View style={styles.careBanner}>
+          <Image source={require("../assets/images/professional-home-img-1.png")} style={styles.careBannerImage} resizeMode="cover" />
+          <View style={styles.careBannerOverlay}>
+            {/* <Text style={styles.careBannerTitle}>Care at home.</Text>
+            <Text style={styles.careBannerSubtitle}>A healthier tomorrow.</Text> */}
           </View>
-
-          <View
-            style={styles.ratingDivider}
-          />
-
-          <View
-            style={styles.ratingMessage}
-          >
-            <Ionicons
-              name="thumbs-up-outline"
-              size={24}
-              color="#16A34A"
-            />
-
-            <Text
-              style={
-                styles.ratingMessageText
-              }
-            >
-              Great work! Keep providing
-              excellent service.
-            </Text>
+          <View style={styles.bannerArrow}>
+            <Ionicons name="arrow-forward" size={18} color="#173B46" />
           </View>
         </View>
 
-        {/* ================================================= */}
-        {/* PENDING CHARGES */}
-        {/* ================================================= */}
-
-        <Text style={styles.sectionTitle}>
-          Pending Charges
-        </Text>
-
-        <View style={styles.chargesCard}>
-          <View style={styles.chargesHeader}>
-            <View style={styles.chargesIcon}>
-              <Ionicons
-                name="receipt-outline"
-                size={23}
-                color="#DC2626"
-              />
+        {/* Existing detailed sections remain available below the redesigned dashboard */}
+        {/* <View style={styles.detailsSection}>
+          <Text style={styles.sectionTitle}>Service Activity</Text>
+          <View style={styles.statsRow}>
+            <StatCard icon="notifications-outline" value={dashboardStats.requestsReceived ?? 0} label="Requests Received" />
+            <View style={styles.statsGap} />
+            <StatCard icon="checkmark-circle-outline" value={dashboardStats.servicesCompleted ?? 0} label="Services Completed" />
+          </View>
+          <View style={styles.completionCard}>
+            <View style={styles.completionHeader}>
+              <View style={styles.completionText}>
+                <Text style={styles.completionTitle}>Service Completion Rate</Text>
+                <Text style={styles.completionSubtitle}>Completed services vs received requests</Text>
+              </View>
+              <Text style={styles.completionPercentage}>{serviceCompletionRate}%</Text>
             </View>
+            <ProgressBar percentage={serviceCompletionRate} />
+          </View>
 
-            <View
-              style={styles.chargesContent}
-            >
-              <Text
-                style={styles.chargesTitle}
-              >
-                Payable to CareNow
-              </Text>
-
-              <Text
-                style={
-                  styles.chargesSubtitle
-                }
-              >
-                Platform charges pending
-                settlement
-              </Text>
+          <Text style={styles.sectionTitle}>Your Rating</Text>
+          <View style={styles.ratingCard}>
+            <View style={styles.ratingScore}>
+              <Text style={styles.ratingNumber}>{dashboardStats.rating.toFixed(1)}</Text>
+              <View style={styles.stars}>{Array.from({ length: 5 }).map((_, index) => <Ionicons key={index} name={index < Math.round(dashboardStats.rating) ? "star" : "star-outline"} size={17} color="#F59E0B" style={styles.star} />)}</View>
+              <Text style={styles.ratingCount}>{dashboardStats.totalRatings} ratings</Text>
+            </View>
+            <View style={styles.ratingDivider} />
+            <View style={styles.ratingMessage}>
+              <Ionicons name="thumbs-up-outline" size={24} color="#16A34A" />
+              <Text style={styles.ratingMessageText}>Great work! Keep providing excellent service.</Text>
             </View>
           </View>
 
-          <View
-            style={styles.chargesBottom}
-          >
-            <Text
-              style={styles.chargesAmount}
-            >
-              ₹
-              {dashboardStats.pendingCharges.toLocaleString(
-                "en-IN"
-              )}
-            </Text>
-
-            <TouchableOpacity
-              style={
-                styles.viewChargesButton
-              }
-              activeOpacity={0.8}
-              onPress={() => {}}
-            >
-              <Text
-                style={
-                  styles.viewChargesText
-                }
-              >
-                View Details
-              </Text>
-
-              <Ionicons
-                name="chevron-forward"
-                size={15}
-                color="#2563EB"
-              />
-            </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Pending Charges</Text>
+          <View style={styles.chargesCard}>
+            <View style={styles.chargesHeader}>
+              <View style={styles.chargesIcon}><Ionicons name="receipt-outline" size={23} color="#DC2626" /></View>
+              <View style={styles.chargesContent}><Text style={styles.chargesTitle}>Payable to CareNow</Text><Text style={styles.chargesSubtitle}>Platform charges pending settlement</Text></View>
+            </View>
+            <View style={styles.chargesBottom}>
+              <Text style={styles.chargesAmount}>₹{dashboardStats.pendingCharges.toLocaleString("en-IN")}</Text>
+              <TouchableOpacity style={styles.viewChargesButton} activeOpacity={0.8} onPress={() => {}}><Text style={styles.viewChargesText}>View Details</Text><Ionicons name="chevron-forward" size={15} color="#0A9FB5" /></TouchableOpacity>
+            </View>
           </View>
-        </View>
-
-        {/* ================================================= */}
-        {/* DEVELOPMENT NOTICE */}
-        {/* ================================================= */}
-
-        <View style={styles.devNotice}>
-          <Ionicons
-            name="construct-outline"
-            size={16}
-            color="#B45309"
-          />
-
-          <Text
-            style={styles.devNoticeText}
-          >
-            Development mode — dashboard
-            statistics and requests are sample
-            data.
-          </Text>
-        </View>
+        </View> */}
       </ScrollView>
+
+      <View style={styles.bottomNav}>
+        <BottomNavItem icon="home" label="Home" active />
+        <BottomNavItem icon="clipboard-outline" label="Requests" />
+        <BottomNavItem icon="wallet-outline" label="Earnings" />
+        <BottomNavItem icon="chatbubble-outline" label="Messages" badge="3" />
+        <BottomNavItem icon="person-outline" label="Profile" onPress={() => router.push("/professional-profile")} />
+      </View>
     </SafeAreaView>
+  );
+}
+
+function MetricCard({
+  icon,
+  value,
+  label,
+  tone,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  value: string;
+  label: string;
+  tone: "teal" | "gold" | "blue";
+}) {
+  return (
+    <View style={[styles.metricCard, tone === "gold" ? styles.metricGold : tone === "blue" ? styles.metricBlue : styles.metricTeal]}>
+      <View style={[styles.metricIcon, tone === "gold" ? styles.metricIconGold : tone === "blue" ? styles.metricIconBlue : styles.metricIconTeal]}>
+        <Ionicons name={icon} size={22} color={tone === "gold" ? "#F4A62A" : tone === "blue" ? "#2175D9" : "#0A9FB5"} />
+      </View>
+      <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={styles.metricLabel} numberOfLines={2}>{label}</Text>
+    </View>
+  );
+}
+
+function BottomNavItem({
+  icon,
+  label,
+  active = false,
+  badge,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  active?: boolean;
+  badge?: string;
+  onPress?: () => void;
+}) {
+  return (
+    <TouchableOpacity style={styles.bottomNavItem} activeOpacity={0.75} onPress={onPress}>
+      <View>
+        <Ionicons name={icon} size={22} color={active ? "#0A9FB5" : "#6F8D99"} />
+        {badge && <View style={styles.navBadge}><Text style={styles.navBadgeText}>{badge}</Text></View>}
+      </View>
+      <Text style={[styles.bottomNavLabel, active && styles.bottomNavLabelActive]}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -949,7 +553,7 @@ function StatCard({
         <Ionicons
           name={icon}
           size={21}
-          color="#2563EB"
+          color="#0A9FB5"
         />
       </View>
 
@@ -1060,7 +664,7 @@ function ServiceRequestCard({
           <Ionicons
             name="medical-outline"
             size={22}
-            color="#2563EB"
+            color="#0A9FB5"
           />
         </View>
 
@@ -1171,7 +775,7 @@ function PrescriptionOrderCard({
           <Ionicons
             name="document-text-outline"
             size={22}
-            color="#7C3AED"
+            color="#0A9FB5"
           />
         </View>
 
@@ -1375,657 +979,102 @@ function formatProfessionalType(
 /* ========================================================= */
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-
-  container: {
-    flex: 1,
-  },
-
-  content: {
-    padding: 20,
-    paddingBottom: 35,
-  },
-
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  loadingText: {
-    marginTop: 12,
-    fontSize: 12,
-    color: "#64748B",
-  },
-
-  /* Header */
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 5,
-    marginBottom: 20,
-  },
-
-  headerText: {
-    flex: 1,
-    marginRight: 15,
-  },
-
-  greeting: {
-    fontSize: 12,
-    color: "#64748B",
-  },
-
-  name: {
-    fontSize: 23,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginTop: 3,
-  },
-
-  professionalType: {
-    fontSize: 11,
-    color: "#2563EB",
-    fontWeight: "700",
-    marginTop: 3,
-  },
-
-  profileButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#2563EB",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  /* Availability */
-
-  availabilityCard: {
-    backgroundColor: "#F0FDF4",
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-    borderRadius: 13,
-    padding: 13,
-  },
-
-  availabilityHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-
-  availabilityLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  onlineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#16A34A",
-    marginRight: 10,
-  },
-
-  availabilityTitle: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#15803D",
-  },
-
-  availabilitySubtitle: {
-    fontSize: 10,
-    color: "#166534",
-    marginTop: 3,
-  },
-
-  availabilityToggle: {
-    flexDirection: "row",
-    alignSelf: "stretch",
-    marginTop: 10,
-    backgroundColor: "#E2E8F0",
-    borderRadius: 10,
-    padding: 3,
-  },
-
-  availabilityOption: {
-    flex: 1,
-    minHeight: 32,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 7,
-  },
-
-  availabilityOptionSelected: {
-    backgroundColor: "#2563EB",
-  },
-
-  availabilityOptionText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#475569",
-  },
-
-  availabilityOptionTextSelected: {
-    color: "#FFFFFF",
-  },
-
-  /* Pending */
-
-  pendingCard: {
-    backgroundColor: "#FFFBEB",
-    borderWidth: 1,
-    borderColor: "#FDE68A",
-    borderRadius: 13,
-    padding: 13,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  pendingIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#FEF3C7",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  pendingContent: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  pendingTitle: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#92400E",
-  },
-
-  pendingSubtitle: {
-    fontSize: 10,
-    color: "#A16207",
-    marginTop: 3,
-  },
-
-  /* Section */
-
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginTop: 22,
-    marginBottom: 10,
-  },
-
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  viewAllText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#2563EB",
-    marginTop: 22,
-  },
-
-  /* Earnings */
-
-  earningsCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  earningsIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  earningsContent: {
-    flex: 1,
-    marginLeft: 13,
-  },
-
-  earningsLabel: {
-    fontSize: 11,
-    color: "#64748B",
-  },
-
-  earningsAmount: {
-    fontSize: 25,
-    fontWeight: "900",
-    color: "#0F172A",
-    marginTop: 2,
-  },
-
-  earningsSubtext: {
-    fontSize: 9,
-    color: "#94A3B8",
-    marginTop: 3,
-  },
-
-  /* Stats */
-
-  statsRow: {
-    flexDirection: "row",
-  },
-
-  statsRowSecond: {
-    flexDirection: "row",
-    marginTop: 10,
-  },
-
-  statsGap: {
-    width: 10,
-  },
-
-  statCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 14,
-  },
-
-  statIcon: {
-    width: 39,
-    height: 39,
-    borderRadius: 20,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  statValue: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: "#0F172A",
-    marginTop: 9,
-  },
-
-  statLabel: {
-    fontSize: 10,
-    lineHeight: 14,
-    color: "#64748B",
-    marginTop: 2,
-  },
-
-  /* Completion */
-
-  completionCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 15,
-    marginTop: 10,
-  },
-
-  completionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  completionText: {
-    flex: 1,
-    marginRight: 10,
-  },
-
-  completionTitle: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#1E293B",
-  },
-
-  completionSubtitle: {
-    fontSize: 9,
-    color: "#64748B",
-    marginTop: 3,
-  },
-
-  completionPercentage: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: "#16A34A",
-  },
-
-  pharmacyPercentage: {
-    color: "#7C3AED",
-  },
-
-  progressBackground: {
-    height: 7,
-    backgroundColor: "#E2E8F0",
-    borderRadius: 5,
-    marginTop: 13,
-    overflow: "hidden",
-  },
-
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#16A34A",
-    borderRadius: 5,
-  },
-
-  pharmacyProgress: {
-    backgroundColor: "#7C3AED",
-  },
-
-  /* Request Cards */
-
-  requestCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 14,
-    marginBottom: 10,
-  },
-
-  requestHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  requestIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 22,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  prescriptionIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 22,
-    backgroundColor: "#F5F3FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  requestHeaderContent: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  requestType: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#1E293B",
-  },
-
-  requestId: {
-    fontSize: 9,
-    color: "#94A3B8",
-    marginTop: 3,
-  },
-
-  urgentBadge: {
-    backgroundColor: "#FEF2F2",
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-  },
-
-  urgentText: {
-    fontSize: 8,
-    fontWeight: "900",
-    color: "#DC2626",
-  },
-
-  newBadge: {
-    backgroundColor: "#F3E8FF",
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-  },
-
-  newBadgeText: {
-    fontSize: 8,
-    fontWeight: "900",
-    color: "#7C3AED",
-  },
-
-  requestDetails: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 13,
-    gap: 12,
-  },
-
-  requestDetail: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  requestDetailText: {
-    fontSize: 10,
-    color: "#475569",
-    marginLeft: 4,
-  },
-
-  requestBottom: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-    marginTop: 13,
-    paddingTop: 12,
-  },
-
-  offeredLabel: {
-    fontSize: 9,
-    color: "#64748B",
-  },
-
-  offeredPrice: {
-    fontSize: 17,
-    fontWeight: "900",
-    color: "#0F172A",
-    marginTop: 2,
-  },
-
-  acceptButton: {
-    height: 38,
-    paddingHorizontal: 12,
-    borderRadius: 9,
-    backgroundColor: "#2563EB",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  prescriptionButton: {
-    height: 38,
-    paddingHorizontal: 12,
-    borderRadius: 9,
-    backgroundColor: "#7C3AED",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  acceptButtonText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    marginRight: 4,
-  },
-
-  /* Rating */
-
-  ratingCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  ratingScore: {
-    alignItems: "center",
-    minWidth: 95,
-  },
-
-  ratingNumber: {
-    fontSize: 30,
-    fontWeight: "900",
-    color: "#0F172A",
-  },
-
-  stars: {
-    flexDirection: "row",
-    marginTop: 3,
-  },
-
-  star: {
-    marginHorizontal: 1,
-  },
-
-  ratingCount: {
-    fontSize: 9,
-    color: "#64748B",
-    marginTop: 5,
-  },
-
-  ratingDivider: {
-    width: 1,
-    height: 60,
-    backgroundColor: "#E2E8F0",
-    marginHorizontal: 15,
-  },
-
-  ratingMessage: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  ratingMessageText: {
-    flex: 1,
-    fontSize: 11,
-    lineHeight: 16,
-    color: "#475569",
-    marginLeft: 9,
-  },
-
-  /* Charges */
-
-  chargesCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#FECACA",
-    padding: 15,
-  },
-
-  chargesHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  chargesIcon: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
-    backgroundColor: "#FEF2F2",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  chargesContent: {
-    flex: 1,
-    marginLeft: 11,
-  },
-
-  chargesTitle: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#1E293B",
-  },
-
-  chargesSubtitle: {
-    fontSize: 10,
-    color: "#64748B",
-    marginTop: 3,
-  },
-
-  chargesBottom: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-    marginTop: 13,
-    paddingTop: 13,
-  },
-
-  chargesAmount: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: "#DC2626",
-  },
-
-  viewChargesButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 7,
-    paddingHorizontal: 9,
-    backgroundColor: "#EFF6FF",
-    borderRadius: 8,
-  },
-
-  viewChargesText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#2563EB",
-    marginRight: 3,
-  },
-
-  /* Development */
-
-  devNotice: {
-    marginTop: 22,
-    backgroundColor: "#FFFBEB",
-    borderWidth: 1,
-    borderColor: "#FDE68A",
-    borderRadius: 10,
-    padding: 10,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  devNoticeText: {
-    flex: 1,
-    fontSize: 9,
-    lineHeight: 14,
-    color: "#92400E",
-    marginLeft: 7,
-  },
+  safeArea: { flex: 1, backgroundColor: "#F7FCFD" },
+  container: { flex: 1, backgroundColor: "#F7FCFD" },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 92 },
+  loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
+  loadingText: { marginTop: 12, fontSize: 12, color: "#64748B" },
+
+  topHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingBottom: 14 },
+  profileSummary: { flexDirection: "row", alignItems: "center", flex: 1 },
+  avatarWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#DCEEF2", borderWidth: 1, borderColor: "#C9E3E8", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  headerIdentity: { marginLeft: 12, flex: 1 },
+  welcome: { fontSize: 21, fontWeight: "800", color: "#10283A" },
+  onlineRow: { flexDirection: "row", alignItems: "center", marginTop: 3 },
+  onlineDot: { width: 9, height: 9, borderRadius: 5, marginRight: 7 },
+  onlineText: { fontSize: 14, fontWeight: "700", color: "#16A765" },
+  professionalType: { fontSize: 13, color: "#6C8296", marginTop: 2 },
+  notificationButton: { width: 52, height: 52, borderRadius: 26, backgroundColor: "#E8F8F8", alignItems: "center", justifyContent: "center", position: "relative" },
+  notificationBadge: { position: "absolute", right: -1, top: -1, minWidth: 21, height: 21, paddingHorizontal: 5, borderRadius: 11, backgroundColor: "#F04444", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#F7FCFD" },
+  notificationBadgeText: { color: "#FFF", fontSize: 11, fontWeight: "800" },
+
+  availabilityCard: { backgroundColor: "#E9FAF7", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, marginBottom: 18 },
+  availabilityTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  availabilityCopy: { flex: 1 },
+  availableLine: { flexDirection: "row", alignItems: "center" },
+  availableDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#20B66B", marginRight: 10 },
+  availableTitle: { fontSize: 13, fontWeight: "800", color: "#173B46" },
+  bigSwitch: { width: 70, height: 42, borderRadius: 22, backgroundColor: "#0A9FB5", padding: 4, justifyContent: "center" },
+  bigSwitchOff: { backgroundColor: "#B9CBD0" },
+  switchThumb: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#FFFFFF", alignSelf: "flex-end", shadowColor: "#000", shadowOpacity: 0.14, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
+  switchThumbOff: { alignSelf: "flex-start" },
+
+  pendingCard: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 16, padding: 14, flexDirection: "row", alignItems: "center", marginBottom: 18 },
+  pendingContent: { flex: 1, marginLeft: 10 },
+  pendingTitle: { fontSize: 13, fontWeight: "800", color: "#92400E" },
+  pendingSubtitle: { fontSize: 11, color: "#A16207", marginTop: 3 },
+
+  metricGrid: { flexDirection: "row", gap: 7, marginBottom: 24 },
+  metricCard: { flex: 1, minWidth: 0, borderRadius: 13, paddingVertical: 12, paddingHorizontal: 7, alignItems: "center", borderWidth: 1 },
+  metricTeal: { backgroundColor: "#E8FAF6", borderColor: "#D2F0EA" },
+  metricGold: { backgroundColor: "#FFF9EA", borderColor: "#F6E8BE" },
+  metricBlue: { backgroundColor: "#EDF6FF", borderColor: "#DCEBFA" },
+  metricIcon: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", marginBottom: 7 },
+  metricIconTeal: { backgroundColor: "#D7F3ED" },
+  metricIconGold: { backgroundColor: "#FFF0C8" },
+  metricIconBlue: { backgroundColor: "#DDEEFF" },
+  metricValue: { fontSize: 16, fontWeight: "900", color: "#13273A", textAlign: "center", maxWidth: "100%" },
+  metricLabel: { fontSize: 9, lineHeight: 12, color: "#4F687A", textAlign: "center", marginTop: 3 },
+
+  activityHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 11 },
+  activityTitle: { fontSize: 18, fontWeight: "900", color: "#10283A" },
+  viewAllRow: { flexDirection: "row", alignItems: "center", gap: 3 },
+  viewAllText: { fontSize: 12, fontWeight: "800", color: "#0A9FB5" },
+  activityList: { gap: 9 },
+  activityCard: { minHeight: 68, backgroundColor: "#FFFFFF", borderRadius: 14, borderWidth: 1, borderColor: "#E1EEF0", paddingHorizontal: 11, paddingVertical: 9, flexDirection: "row", alignItems: "center", shadowColor: "#0A7F8E", shadowOpacity: 0.06, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  activityIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: "#E6F8F7", alignItems: "center", justifyContent: "center" },
+  activityInfo: { flex: 1, marginLeft: 10, marginRight: 7 },
+  activityService: { fontSize: 12, fontWeight: "800", color: "#183247" },
+  activityPatient: { fontSize: 10, color: "#607A8C", marginTop: 2 },
+  activityTime: { fontSize: 9, color: "#7690A0", marginTop: 1 },
+  activityStatus: { borderRadius: 16, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6 },
+  activityStatusUpcoming: { backgroundColor: "#E8F3FF" },
+  activityStatusUrgent: { backgroundColor: "#FFF0E2" },
+  activityStatusText: { fontSize: 9, fontWeight: "800" },
+  activityStatusUpcomingText: { color: "#2879E8" },
+  activityStatusUrgentText: { color: "#D97816" },
+
+  careBanner: { height: 126, borderRadius: 15, overflow: "hidden", marginTop: 16, position: "relative", backgroundColor: "#DDF6F5" },
+  careBannerImage: { width: "100%", height: "100%" },
+  careBannerOverlay: { position: "absolute", left: 16, top: 31 },
+  careBannerTitle: { fontSize: 17, fontWeight: "900", color: "#153548" },
+  careBannerSubtitle: { fontSize: 15, color: "#153548", marginTop: 1 },
+  bannerArrow: { position: "absolute", right: 12, bottom: 13, width: 34, height: 34, borderRadius: 17, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+
+  bottomNav: { position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", backgroundColor: "#FFFFFF", borderTopWidth: 1, borderTopColor: "#E2EFF1", paddingHorizontal: 6, paddingTop: 9, paddingBottom: 8, zIndex: 20, elevation: 12 },
+  bottomNavItem: { flex: 1, alignItems: "center", justifyContent: "center", minHeight: 50 },
+  bottomNavLabel: { fontSize: 9, color: "#6F8D99", marginTop: 4 },
+  bottomNavLabelActive: { color: "#0A9FB5", fontWeight: "800" },
+  navBadge: { position: "absolute", right: -9, top: -6, minWidth: 17, height: 17, borderRadius: 9, backgroundColor: "#F04444", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FFFFFF" },
+  navBadgeText: { fontSize: 9, color: "#FFFFFF", fontWeight: "800" },
+  detailsSection: { marginTop: 8 },
+
+  sectionTitle: { fontSize: 17, fontWeight: "900", color: "#10283A", marginTop: 22, marginBottom: 10 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  earningsCard: { backgroundColor: "#FFF", borderRadius: 15, borderWidth: 1, borderColor: "#DDEBED", padding: 16, flexDirection: "row", alignItems: "center" },
+  earningsIcon: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#E7F8F6", alignItems: "center", justifyContent: "center" },
+  earningsContent: { flex: 1, marginLeft: 13 },
+  earningsLabel: { fontSize: 11, color: "#64748B" },
+  earningsAmount: { fontSize: 25, fontWeight: "900", color: "#0F172A", marginTop: 2 },
+  earningsSubtext: { fontSize: 9, color: "#94A3B8", marginTop: 3 },
+  statsRow: { flexDirection: "row" }, statsRowSecond: { flexDirection: "row", marginTop: 10 }, statsGap: { width: 10 },
+  statCard: { flex: 1, backgroundColor: "#FFF", borderRadius: 14, borderWidth: 1, borderColor: "#DDEBED", padding: 14 },
+  statIcon: { width: 39, height: 39, borderRadius: 20, backgroundColor: "#E7F8F6", alignItems: "center", justifyContent: "center" },
+  statValue: { fontSize: 24, fontWeight: "900", color: "#0F172A", marginTop: 9 }, statLabel: { fontSize: 10, lineHeight: 14, color: "#64748B", marginTop: 2 },
+  completionCard: { backgroundColor: "#FFF", borderRadius: 14, borderWidth: 1, borderColor: "#DDEBED", padding: 15, marginTop: 10 },
+  completionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, completionText: { flex: 1, marginRight: 10 }, completionTitle: { fontSize: 12, fontWeight: "800", color: "#1E293B" }, completionSubtitle: { fontSize: 9, color: "#64748B", marginTop: 3 }, completionPercentage: { fontSize: 20, fontWeight: "900", color: "#16A34A" }, pharmacyPercentage: { color: "#0A9FB5" }, progressBackground: { height: 7, backgroundColor: "#DCE8EC", borderRadius: 5, marginTop: 13, overflow: "hidden" }, progressFill: { height: "100%", backgroundColor: "#16A765", borderRadius: 5 }, pharmacyProgress: { backgroundColor: "#0A9FB5" },
+  requestCard: { backgroundColor: "#FFF", borderRadius: 14, borderWidth: 1, borderColor: "#DDEBED", padding: 14, marginBottom: 10 }, requestHeader: { flexDirection: "row", alignItems: "center" }, requestIcon: { width: 43, height: 43, borderRadius: 22, backgroundColor: "#E7F8F6", alignItems: "center", justifyContent: "center" }, prescriptionIcon: { width: 43, height: 43, borderRadius: 22, backgroundColor: "#E7F8F6", alignItems: "center", justifyContent: "center" }, requestHeaderContent: { flex: 1, marginLeft: 10 }, requestType: { fontSize: 12, fontWeight: "800", color: "#1E293B" }, requestId: { fontSize: 9, color: "#94A3B8", marginTop: 3 }, urgentBadge: { backgroundColor: "#FEF2F2", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 4 }, urgentText: { fontSize: 8, fontWeight: "900", color: "#DC2626" }, newBadge: { backgroundColor: "#E7F8F6", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 4 }, newBadgeText: { fontSize: 8, fontWeight: "900", color: "#0A9FB5" }, requestDetails: { flexDirection: "row", flexWrap: "wrap", marginTop: 13, gap: 12 }, requestDetail: { flexDirection: "row", alignItems: "center" }, requestDetailText: { fontSize: 10, color: "#475569", marginLeft: 4 }, requestBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#F1F5F9", marginTop: 13, paddingTop: 12 }, offeredLabel: { fontSize: 9, color: "#64748B" }, offeredPrice: { fontSize: 17, fontWeight: "900", color: "#0F172A", marginTop: 2 }, acceptButton: { height: 38, paddingHorizontal: 12, borderRadius: 9, backgroundColor: "#0A9FB5", flexDirection: "row", alignItems: "center", justifyContent: "center" }, prescriptionButton: { height: 38, paddingHorizontal: 12, borderRadius: 9, backgroundColor: "#0A9FB5", flexDirection: "row", alignItems: "center", justifyContent: "center" }, acceptButtonText: { fontSize: 10, fontWeight: "800", color: "#FFF", marginRight: 4 },
+  ratingCard: { backgroundColor: "#FFF", borderRadius: 14, borderWidth: 1, borderColor: "#DDEBED", padding: 16, flexDirection: "row", alignItems: "center" }, ratingScore: { alignItems: "center", minWidth: 95 }, ratingNumber: { fontSize: 30, fontWeight: "900", color: "#0F172A" }, stars: { flexDirection: "row", marginTop: 3 }, star: { marginHorizontal: 1 }, ratingCount: { fontSize: 9, color: "#64748B", marginTop: 5 }, ratingDivider: { width: 1, height: 60, backgroundColor: "#E2E8F0", marginHorizontal: 15 }, ratingMessage: { flex: 1, flexDirection: "row", alignItems: "center" }, ratingMessageText: { flex: 1, fontSize: 11, lineHeight: 16, color: "#475569", marginLeft: 9 },
+  chargesCard: { backgroundColor: "#FFF", borderRadius: 14, borderWidth: 1, borderColor: "#FECACA", padding: 15 }, chargesHeader: { flexDirection: "row", alignItems: "center" }, chargesIcon: { width: 45, height: 45, borderRadius: 23, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center" }, chargesContent: { flex: 1, marginLeft: 11 }, chargesTitle: { fontSize: 12, fontWeight: "800", color: "#1E293B" }, chargesSubtitle: { fontSize: 10, color: "#64748B", marginTop: 3 }, chargesBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#F1F5F9", marginTop: 13, paddingTop: 13 }, chargesAmount: { fontSize: 22, fontWeight: "900", color: "#DC2626" }, viewChargesButton: { flexDirection: "row", alignItems: "center", paddingVertical: 7, paddingHorizontal: 9, backgroundColor: "#E7F8F6", borderRadius: 8 }, viewChargesText: { fontSize: 10, fontWeight: "800", color: "#0A9FB5", marginRight: 3 },
+  devNotice: { marginTop: 22, backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 10, padding: 10, flexDirection: "row", alignItems: "center" }, devNoticeText: { flex: 1, fontSize: 9, lineHeight: 14, color: "#92400E", marginLeft: 7 },
 });

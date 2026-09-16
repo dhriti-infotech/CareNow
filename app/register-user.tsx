@@ -76,7 +76,7 @@ export default function RegisterUserScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={22} color="#0F172A" />
+            <Ionicons name="arrow-back" size={22} color="#101828" />
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>Create Account</Text>
@@ -85,14 +85,14 @@ export default function RegisterUserScreen() {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <View style={styles.iconContainer}>
-            <Ionicons name="person-add-outline" size={32} color="#2563EB" />
+            <Ionicons name="person-add-outline" size={32} color="#0A9FB5" />
           </View>
 
           <Text style={styles.title}>Create your CareNow account</Text>
           <Text style={styles.subtitle}>Register to request healthcare services at your doorstep.</Text>
 
           <Text style={styles.label}>Full name</Text>
-          <TextInput value={name} onChangeText={setName} placeholder="Enter your full name" placeholderTextColor="#94A3B8" style={styles.input} />
+          <TextInput value={name} onChangeText={setName} placeholder="Enter your full name" placeholderTextColor="#98A2B3" style={styles.input} />
           <Text style={styles.label}>Email address</Text>
           <TextInput
             value={email}
@@ -101,21 +101,21 @@ export default function RegisterUserScreen() {
               if (error) setError("");
             }}
             placeholder="Enter your email"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#98A2B3"
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             style={styles.input}
           />
           <Text style={styles.label}>Mobile number</Text>
-          <TextInput value={mobile} onChangeText={(value) => setMobile(value.replace(/\D/g, ""))} placeholder="Enter 10-digit mobile number" placeholderTextColor="#94A3B8" keyboardType="phone-pad" maxLength={10} style={styles.input} />
+          <TextInput value={mobile} onChangeText={(value) => setMobile(value.replace(/\D/g, ""))} placeholder="Enter 10-digit mobile number" placeholderTextColor="#98A2B3" keyboardType="phone-pad" maxLength={10} style={styles.input} />
           <Text style={styles.label}>Address (optional)</Text>
-          <TextInput value={address} onChangeText={setAddress} placeholder="Enter your address" placeholderTextColor="#94A3B8" style={styles.input} />
+          <TextInput value={address} onChangeText={setAddress} placeholder="Enter your address" placeholderTextColor="#98A2B3" style={styles.input} />
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <View style={styles.infoCard}>
-            <Ionicons name="shield-checkmark-outline" size={20} color="#2563EB" />
+            <Ionicons name="shield-checkmark-outline" size={20} color="#0A9FB5" />
             <Text style={styles.infoText}>We&apos;ll verify your mobile number using a one-time password.</Text>
           </View>
 
@@ -143,7 +143,7 @@ export default function RegisterUserScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FFFFFF",
   },
   container: {
     flex: 1,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     height: 58,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: "#F0F2F5",
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 17,
     fontWeight: "800",
-    color: "#0F172A",
+    color: "#101828",
   },
   spacer: {
     width: 40,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#EAF9FC",
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
@@ -190,14 +190,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#0F172A",
+    color: "#101828",
     textAlign: "center",
     marginTop: 17,
   },
   subtitle: {
     fontSize: 13,
     lineHeight: 19,
-    color: "#64748B",
+    color: "#667085",
     textAlign: "center",
     marginTop: 6,
     marginBottom: 28,
@@ -205,18 +205,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#334155",
+    color: "#344054",
     marginBottom: 7,
   },
   input: {
     height: 51,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: "#D0D5DD",
     borderRadius: 11,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 13,
     fontSize: 14,
-    color: "#0F172A",
+    color: "#101828",
     marginBottom: 12,
   },
   errorText: {
@@ -227,15 +227,17 @@ const styles = StyleSheet.create({
   infoCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#EAF9FC",
     borderRadius: 12,
     padding: 12,
     marginBottom: 18,
     gap: 8,
+    borderWidth: 1,
+    borderColor: "#D5F1F4",
   },
   infoText: {
     flex: 1,
-    color: "#334155",
+    color: "#344054",
     fontSize: 12,
     lineHeight: 18,
   },
@@ -243,10 +245,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#2563EB",
+    backgroundColor: "#0A9FB5",
     borderRadius: 12,
     paddingVertical: 14,
     gap: 8,
+    shadowColor: "#0A9FB5",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 3,
   },
   disabledButton: {
     opacity: 0.7,
