@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppUser, getSession } from "../services/auth";
 
+import { getNurseDashboard, type NurseDashboard } from "../api/professionalDashboard";
 import {
   getNurseProfile,
   getNurseRequests,
@@ -24,18 +25,12 @@ import {
   type NurseProfile
 } from "../api/professionalRequests";
 import { useAuth } from "../context/auth-context";
-
+import { registerProfessionalPushNotifications } from "../services/professional-notifications";
 import {
-  developmentProfessionalStats,
-  ProfessionalStats,
-  ProfessionalType,
-} from "../services/professional-stats";
-
-import {
-  developmentServiceRequests,
-  PrescriptionOrder,
-  ServiceRequest
+  ServiceRequest,
+  type PrescriptionOrder,
 } from "../services/professional-requests";
+import type { ProfessionalType } from "../services/professional-stats";
 
 export default function ProfessionalHomeScreen() {
   const { user: authUser } = useAuth();
@@ -48,6 +43,7 @@ export default function ProfessionalHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [nurseProfile, setNurseProfile] = useState<NurseProfile | null>(null);
+  const [dashboard, setDashboard] = useState<NurseDashboard | null>(null);
   const [availabilityUpdating, setAvailabilityUpdating] = useState(false);
 
   /*
@@ -99,10 +95,13 @@ export default function ProfessionalHomeScreen() {
 
         if (isNurseServiceProfessional) {
           try {
-            const profile = await getNurseProfile();
+            const [profile, dashboardData, requests] = await Promise.all([
+              getNurseProfile(),
+              getNurseDashboard(),
+              getNurseRequests(),
+            ]);
             setNurseProfile(profile);
-
-            const requests = await getNurseRequests();
+            setDashboard(dashboardData);
             setServiceRequests(requests.map(mapNurseRequest));
           } catch (error: any) {
             console.warn("Unable to load nurse profile/service requests", error);
@@ -129,7 +128,15 @@ export default function ProfessionalHomeScreen() {
     };
   }, [authUser]);
 
-  // Keep the nurse request list current while the dashboard is open.
+  // Register the device for real-time service-request push notifications.
+  // The root notification bridge handles notification taps globally.
+  useEffect(() => {
+    if (status !== "APPROVED") return;
+    void registerProfessionalPushNotifications();
+  }, [status]);
+
+  // Keep the dashboard and request list current while the dashboard is open.
+
   // This allows a newly-created patient request to appear without requiring
   // the nurse to leave and reopen the dashboard.
   useEffect(() => {
@@ -138,10 +145,17 @@ export default function ProfessionalHomeScreen() {
     let cancelled = false;
     const refreshRequests = async () => {
       try {
-        const requests = await getNurseRequests();
-        if (!cancelled) setServiceRequests(requests.map(mapNurseRequest));
+        const [requests, dashboardData] = await Promise.all([
+          getNurseRequests(),
+          getNurseDashboard(),
+        ]);
+        if (!cancelled) {
+          setServiceRequests(requests.map(mapNurseRequest));
+          setDashboard(dashboardData);
+          setNurseProfile((current) => current ? { ...current, availabilityStatus: dashboardData.availabilityStatus } : current);
+        }
       } catch (error) {
-        console.warn("Unable to refresh nurse service requests", error);
+        console.warn("Unable to refresh nurse dashboard data", error);
       }
     };
 
@@ -151,6 +165,14 @@ export default function ProfessionalHomeScreen() {
       clearInterval(interval);
     };
   }, [status, nurseProfile?.availabilityStatus]);
+
+  const activityRequests = useMemo(() => {
+    const active = dashboard?.activeServices ?? [];
+    const offered = dashboard?.newServiceRequests ?? [];
+    return [...active, ...offered]
+      .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime())
+      .slice(0, 3);
+  }, [dashboard]);
 
   /*
    * Loading screen
@@ -185,56 +207,17 @@ export default function ProfessionalHomeScreen() {
   const isPharmacist =
     professionalType === "PHARMACIST";
 
-  const isServiceProfessional =
-    professionalType === "NURSE" ||
-    professionalType === "HEALTH_WORKER" ||
-    professionalType === "HEALTHCARE_WORKER";
-
   /*
-   * Get profession-specific sample statistics.
-   *
-   * user.id MUST match PRO001 / PRO002 / PRO003 / PRO004.
+   * Dashboard metrics come from the authenticated professional dashboard API.
+   * No development/sample statistics are used on the production dashboard.
    */
-  const dashboardStats: ProfessionalStats =
-    (user?.id &&
-      developmentProfessionalStats[user.id]) ||
-    developmentProfessionalStats.PRO003;
+  const servicesCompleted = dashboard?.serviceActivity.servicesCompleted ?? 0;
+  const serviceCompletionRate = dashboard?.serviceActivity.completionRate ?? 0;
+  const lifetimeEarnings = dashboard?.earnings.lifetime ?? 0;
+  const rating = dashboard?.rating.average ?? 0;
 
-  /*
-   * Service completion percentage
-   */
-  const requestsReceived =
-    dashboardStats.requestsReceived ?? 0;
-
-  const servicesCompleted =
-    dashboardStats.servicesCompleted ?? 0;
-
-  const serviceCompletionRate =
-    requestsReceived > 0
-      ? Math.round(
-          (servicesCompleted /
-            requestsReceived) *
-            100
-        )
-      : 0;
-
-  /*
-   * Pharmacist fulfillment percentage
-   */
-  const ordersReceived =
-    dashboardStats.ordersReceived ?? 0;
-
-  const ordersFulfilled =
-    dashboardStats.ordersFulfilled ?? 0;
-
-  const fulfillmentRate =
-    ordersReceived > 0
-      ? Math.round(
-          (ordersFulfilled /
-            ordersReceived) *
-            100
-        )
-      : 0;
+  const ordersFulfilled = 0;
+  const fulfillmentRate = 0;
 
   const handleAvailabilityChange = async (nextStatus: NurseAvailabilityStatus) => {
     if (!nurseProfile || availabilityUpdating || nurseProfile.availabilityStatus === nextStatus) return;
@@ -281,10 +264,6 @@ export default function ProfessionalHomeScreen() {
   };
 
   const displayName = user?.name || "Professional";
-  const activityRequests = serviceRequests.length > 0
-    ? serviceRequests.slice(0, 3)
-    : developmentServiceRequests.slice(0, 3);
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -308,10 +287,10 @@ export default function ProfessionalHomeScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8} onPress={() => {}}>
+          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8} onPress={() => router.push("/professional-requests")}>
             <Ionicons name="notifications-outline" size={25} color="#173B46" />
             <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>{Math.min(activityRequests.length || 3, 9)}</Text>
+              <Text style={styles.notificationBadgeText}>{Math.min(serviceRequests.length, 9)}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -351,16 +330,16 @@ export default function ProfessionalHomeScreen() {
 
         {/* Four headline metrics */}
         <View style={styles.metricGrid}>
-          <MetricCard icon="wallet-outline" value={`₹${dashboardStats.lifetimeEarnings.toLocaleString("en-IN")}`} label="Lifetime Earnings" tone="teal" />
-          <MetricCard icon="clipboard-outline" value={`${isPharmacist ? dashboardStats.ordersFulfilled ?? 0 : dashboardStats.servicesCompleted ?? 0}`} label="Services Provided" tone="teal" />
-          <MetricCard icon="star" value={dashboardStats.rating.toFixed(1)} label="Avg. Rating" tone="gold" />
+          <MetricCard icon="wallet-outline" value={`₹${lifetimeEarnings.toLocaleString("en-IN")}`} label="Lifetime Earnings" tone="teal" />
+          <MetricCard icon="clipboard-outline" value={`${isPharmacist ? ordersFulfilled : servicesCompleted}`} label="Services Provided" tone="teal" />
+          <MetricCard icon="star" value={rating.toFixed(1)} label="Avg. Rating" tone="gold" />
           <MetricCard icon="checkmark-circle-outline" value={`${isPharmacist ? fulfillmentRate : serviceCompletionRate}%`} label="Completion Rate" tone="blue" />
         </View>
 
         {/* Today's Activity */}
         <View style={styles.activityHeader}>
           <Text style={styles.activityTitle}>Today's Activity</Text>
-          <TouchableOpacity activeOpacity={0.7} onPress={() => {}} style={styles.viewAllRow}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => router.push("/professional-requests")} style={styles.viewAllRow}>
             <Text style={styles.viewAllText}>View All</Text>
             <Ionicons name="arrow-forward" size={17} color="#0A9FB5" />
           </TouchableOpacity>
@@ -368,7 +347,12 @@ export default function ProfessionalHomeScreen() {
 
         <View style={styles.activityList}>
           {activityRequests.map((request, index) => (
-            <View key={request.id} style={styles.activityCard}>
+            <TouchableOpacity
+              key={request.requestId}
+              style={styles.activityCard}
+              activeOpacity={0.85}
+              onPress={() => router.push({ pathname: "/professional-requests", params: { requestId: request.requestId } })}
+            >
               <View style={styles.activityIcon}>
                 <Ionicons
                   name={index === 0 ? "home-outline" : index === 1 ? "medkit-outline" : "pulse-outline"}
@@ -383,11 +367,11 @@ export default function ProfessionalHomeScreen() {
               </View>
               <View style={[styles.activityStatus, request.priority === "URGENT" ? styles.activityStatusUrgent : styles.activityStatusUpcoming]}>
                 <Text style={[styles.activityStatusText, request.priority === "URGENT" ? styles.activityStatusUrgentText : styles.activityStatusUpcomingText]}>
-                  {request.priority === "URGENT" ? "Urgent" : index === 0 ? "Accepted" : "Upcoming"}
+                  {request.priority === "URGENT" ? "Urgent" : activityStatusLabel(request.status)}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={19} color="#2D7481" />
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
@@ -425,7 +409,7 @@ export default function ProfessionalHomeScreen() {
           <Text style={styles.sectionTitle}>Your Rating</Text>
           <View style={styles.ratingCard}>
             <View style={styles.ratingScore}>
-              <Text style={styles.ratingNumber}>{dashboardStats.rating.toFixed(1)}</Text>
+              <Text style={styles.ratingNumber}>{rating.toFixed(1)}</Text>
               <View style={styles.stars}>{Array.from({ length: 5 }).map((_, index) => <Ionicons key={index} name={index < Math.round(dashboardStats.rating) ? "star" : "star-outline"} size={17} color="#F59E0B" style={styles.star} />)}</View>
               <Text style={styles.ratingCount}>{dashboardStats.totalRatings} ratings</Text>
             </View>
@@ -452,7 +436,7 @@ export default function ProfessionalHomeScreen() {
 
       <View style={styles.bottomNav}>
         <BottomNavItem icon="home" label="Home" active />
-        <BottomNavItem icon="clipboard-outline" label="Requests" />
+        <BottomNavItem icon="clipboard-outline" label="Requests" onPress={() => router.push("/professional-requests")} />
         <BottomNavItem icon="wallet-outline" label="Earnings" />
         <BottomNavItem icon="chatbubble-outline" label="Messages" badge="3" />
         <BottomNavItem icon="person-outline" label="Profile" onPress={() => router.push("/professional-profile")} />
@@ -627,6 +611,18 @@ function mapNurseRequest(request: {
     offeredPrice: request.offeredPrice,
     priority: request.priority,
   };
+}
+
+function activityStatusLabel(status: NurseDashboard["activeServices"][number]["status"]) {
+  switch (status) {
+    case "ACCEPTED": return "Accepted";
+    case "EN_ROUTE": return "On the way";
+    case "ARRIVED": return "Arrived";
+    case "IN_SERVICE": return "In service";
+    case "COMPLETED": return "Completed";
+    case "OFFERED": return "New";
+    default: return "Upcoming";
+  }
 }
 
 function formatRequestTime(value: string) {

@@ -36,6 +36,13 @@ export type NurseProfile = {
 export const getNurseProfile = async () =>
   (await apiClient.get<NurseProfile>('/api/professional-nurse/me')).data;
 
+export const registerNursePushToken = async (payload: {
+  deviceId: string;
+  pushToken: string;
+  platform: string;
+}) =>
+  (await apiClient.post<{ message: string }>('/api/professional-nurse/notifications/push-token', payload)).data;
+
 export const updateNurseAvailability = async (payload: {
   availabilityStatus: NurseAvailabilityStatus;
   latitude?: number | null;

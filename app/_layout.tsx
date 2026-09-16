@@ -1,7 +1,12 @@
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import 'react-native-reanimated';
 
 import { AuthProvider } from '../context/auth-context';
+import { useEffect } from 'react';
+import {
+  addProfessionalNotificationResponseListener,
+  getInitialProfessionalNotificationRequestId,
+} from '../services/professional-notifications';
 
 
 export const unstable_settings = {
@@ -10,6 +15,20 @@ export const unstable_settings = {
 
 
 export default function RootLayout() {
+  useEffect(() => {
+    const subscription = addProfessionalNotificationResponseListener((requestId) => {
+      router.push({ pathname: '/professional-requests', params: { requestId } });
+    });
+
+    void getInitialProfessionalNotificationRequestId().then((requestId) => {
+      if (requestId) {
+        router.push({ pathname: '/professional-requests', params: { requestId } });
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   return (
     <AuthProvider>
       <Stack initialRouteName="index">
@@ -20,6 +39,7 @@ export default function RootLayout() {
         <Stack.Screen name="verify-otp" options={{ headerShown: false }} />
         <Stack.Screen name="professional-profile" options={{ headerShown: false }} />
         <Stack.Screen name="professional-home" options={{ headerShown: false }} />
+        <Stack.Screen name="professional-requests" options={{ headerShown: false }} />
         <Stack.Screen name="professional-verification" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="request-nurse" options={{ headerShown: false }} />
