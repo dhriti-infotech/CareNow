@@ -16,7 +16,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppUser, getSession } from "../services/auth";
 
-import { getNurseDashboard, type NurseDashboard } from "../api/professionalDashboard";
 import {
   getNurseProfile,
   getNurseRequests,
@@ -25,12 +24,13 @@ import {
   type NurseProfile
 } from "../api/professionalRequests";
 import { useAuth } from "../context/auth-context";
+import { getNurseDashboard, type NurseDashboard } from "../api/professionalDashboard";
 import { registerProfessionalPushNotifications } from "../services/professional-notifications";
+import type { ProfessionalType } from "../services/professional-stats";
 import {
   ServiceRequest,
   type PrescriptionOrder,
 } from "../services/professional-requests";
-import type { ProfessionalType } from "../services/professional-stats";
 
 export default function ProfessionalHomeScreen() {
   const { user: authUser } = useAuth();
@@ -60,6 +60,19 @@ export default function ProfessionalHomeScreen() {
     let timer:
       | ReturnType<typeof setTimeout>
       | undefined;
+
+    // This screen can remain mounted briefly while Expo Router replaces the
+    // previous route during logout/login. Never make professional API calls
+    // when the current authenticated account is a patient/user.
+    if (authUser?.role !== "PROFESSIONAL") {
+      setLoading(false);
+      setServiceRequests([]);
+      setNurseProfile(null);
+      setDashboard(null);
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
+    }
 
     const initializeProfessional = async () => {
       const session = await getSession();
@@ -131,15 +144,16 @@ export default function ProfessionalHomeScreen() {
   // Register the device for real-time service-request push notifications.
   // The root notification bridge handles notification taps globally.
   useEffect(() => {
-    if (status !== "APPROVED") return;
+    if (authUser?.role !== "PROFESSIONAL" || status !== "APPROVED") return;
     void registerProfessionalPushNotifications();
-  }, [status]);
+  }, [authUser?.role, status]);
 
   // Keep the dashboard and request list current while the dashboard is open.
 
   // This allows a newly-created patient request to appear without requiring
   // the nurse to leave and reopen the dashboard.
   useEffect(() => {
+    if (authUser?.role !== "PROFESSIONAL") return;
     if (!approvedStatus(status) || nurseProfile?.availabilityStatus !== "AVAILABLE") return;
 
     let cancelled = false;
@@ -164,7 +178,7 @@ export default function ProfessionalHomeScreen() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [status, nurseProfile?.availabilityStatus]);
+  }, [authUser?.role, status, nurseProfile?.availabilityStatus]);
 
   const activityRequests = useMemo(() => {
     const active = dashboard?.activeServices ?? [];
@@ -192,6 +206,12 @@ export default function ProfessionalHomeScreen() {
         </View>
       </SafeAreaView>
     );
+  }
+
+  // Logout/login transitions can briefly leave this route mounted. Do not
+  // render professional data for a non-professional authenticated account.
+  if (authUser?.role !== "PROFESSIONAL") {
+    return null;
   }
 
   const approved = status === "APPROVED";
