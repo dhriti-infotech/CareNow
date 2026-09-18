@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppUser, getSession } from "../services/auth";
+import { getProfilePictureSource } from "../api/profilePicture";
 
 import {
   getNurseProfile,
@@ -45,6 +46,10 @@ export default function ProfessionalHomeScreen() {
   const [nurseProfile, setNurseProfile] = useState<NurseProfile | null>(null);
   const [dashboard, setDashboard] = useState<NurseDashboard | null>(null);
   const [availabilityUpdating, setAvailabilityUpdating] = useState(false);
+  const [profilePictureSource, setProfilePictureSource] = useState<{
+    uri: string;
+    headers: { Authorization: string };
+  } | null>(null);
 
   /*
    * Load the logged-in professional.
@@ -56,6 +61,24 @@ export default function ProfessionalHomeScreen() {
    *      show pending
    *      automatically approve after 5 seconds
    */
+  useFocusEffect(
+    useCallback(() => {
+      if (authUser?.role !== "PROFESSIONAL" || !authUser.accountId) {
+        setProfilePictureSource(null);
+        return undefined;
+      }
+
+      let active = true;
+      void getProfilePictureSource("PROFESSIONAL", Date.now()).then((source) => {
+        if (active) setProfilePictureSource(source);
+      });
+
+      return () => {
+        active = false;
+      };
+    }, [authUser?.accountId, authUser?.role])
+  );
+
   useEffect(() => {
     let timer:
       | ReturnType<typeof setTimeout>
@@ -294,9 +317,22 @@ export default function ProfessionalHomeScreen() {
         {/* Header */}
         <View style={styles.topHeader}>
           <View style={styles.profileSummary}>
-            <View style={styles.avatarWrap}>
-              <Ionicons name="person" size={31} color="#0A9FB5" />
-            </View>
+            <TouchableOpacity
+              style={styles.avatarWrap}
+              activeOpacity={0.8}
+              onPress={() => router.push("/professional-profile")}
+            >
+              {profilePictureSource ? (
+                <Image
+                  source={profilePictureSource}
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                  onError={() => setProfilePictureSource(null)}
+                />
+              ) : (
+                <Ionicons name="person" size={31} color="#0A9FB5" />
+              )}
+            </TouchableOpacity>
             <View style={styles.headerIdentity}>
               <Text style={styles.welcome}>Hi, {displayName}!</Text>
               <View style={styles.onlineRow}>
@@ -1004,6 +1040,7 @@ const styles = StyleSheet.create({
   topHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingBottom: 14 },
   profileSummary: { flexDirection: "row", alignItems: "center", flex: 1 },
   avatarWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#DCEEF2", borderWidth: 1, borderColor: "#C9E3E8", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  avatarImage: { width: "100%", height: "100%", borderRadius: 32 },
   headerIdentity: { marginLeft: 12, flex: 1 },
   welcome: { fontSize: 21, fontWeight: "800", color: "#10283A" },
   onlineRow: { flexDirection: "row", alignItems: "center", marginTop: 3 },

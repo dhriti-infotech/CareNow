@@ -14,7 +14,7 @@ export type NurseServiceRequestStatus =
 export type CreateNurseServiceRequest = {
   serviceType: string;
   patientName: string;
-  patientAge: number;
+  patientAge?: number | null;
   locationAddress: string;
   latitude: number;
   longitude: number;
@@ -27,7 +27,7 @@ export type PatientServiceRequest = {
   requestId: string;
   patientProfileId: string;
   patientName: string;
-  patientAge: number;
+  patientAge?: number | null;
   serviceType: string;
   locationAddress: string;
   latitude: number;

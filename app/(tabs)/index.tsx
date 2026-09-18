@@ -1,6 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import * as Location from "expo-location";
+import { router, useFocusEffect } from "expo-router";
 import {
+  ActivityIndicator,
+  Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,6 +12,10 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useCallback, useEffect, useState } from "react";
+
+import { getProfilePictureSource } from "../../api/profilePicture";
+import { useAuth } from "../../context/auth-context";
 
 const quickServices = [
   {
@@ -36,30 +44,91 @@ const quickServices = [
   },
 ];
 
-const popularServices = [
-  {
-    title: "Injection administration",
-    icon: "fitness-outline" as const,
-  },
-  {
-    title: "Wound dressing",
-    icon: "bandage-outline" as const,
-  },
-  {
-    title: "BP / Sugar check",
-    icon: "heart-outline" as const,
-  },
-  {
-    title: "Elderly care",
-    icon: "people-outline" as const,
-  },
-  {
-    title: "Nursing visit",
-    icon: "medkit-outline" as const,
-  },
-];
+
 
 export default function HomeScreen() {
+  const { user } = useAuth();
+  const [profilePicture, setProfilePicture] = useState<Awaited<ReturnType<typeof getProfilePictureSource>>>(null);
+  const [profilePictureLoading, setProfilePictureLoading] = useState(true);
+  const [locationText, setLocationText] = useState("Select your location");
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  const loadProfilePicture = useCallback(async () => {
+    try {
+      setProfilePictureLoading(true);
+      const source = await getProfilePictureSource("USER", Date.now());
+      setProfilePicture(source);
+    } catch {
+      setProfilePicture(null);
+    } finally {
+      setProfilePictureLoading(false);
+    }
+  }, []);
+
+  const detectCurrentLocation = useCallback(async () => {
+    try {
+      setLocationLoading(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Location permission required",
+          "Please allow CareNow to use your location so we can show your current location."
+        );
+        return;
+      }
+
+      try {
+        await Location.enableNetworkProviderAsync();
+      } catch {
+        // Continue with the available device location provider.
+      }
+
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const { latitude, longitude } = currentLocation.coords;
+      const addresses = await Location.reverseGeocodeAsync({ latitude, longitude });
+
+      if (addresses.length > 0) {
+        const place = addresses[0];
+        // Prefer the most local locality first (for example,
+        // "Uppal, Hyderabad") while keeping the header compact.
+        const primary = place.district || place.city || place.subregion || place.region;
+        const secondary = place.city && place.city !== primary
+          ? place.city
+          : place.region && place.region !== primary
+            ? place.region
+            : undefined;
+
+        const formatted = [primary, secondary].filter(Boolean).join(", ");
+        setLocationText(formatted || place.name || "Current location");
+      } else {
+        setLocationText("Current location");
+      }
+    } catch (error) {
+      console.error("Home location detection failed:", error);
+      Alert.alert(
+        "Location unavailable",
+        "We couldn't detect your current location. Please check that Location Services are enabled and try again."
+      );
+    } finally {
+      setLocationLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadProfilePicture();
+      return undefined;
+    }, [loadProfilePicture])
+  );
+
+  useEffect(() => {
+    void detectCurrentLocation();
+  }, [detectCurrentLocation]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.container}>
@@ -69,15 +138,30 @@ export default function HomeScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.locationContainer}>
+            <TouchableOpacity
+              style={styles.locationContainer}
+              onPress={() => void detectCurrentLocation()}
+              activeOpacity={0.75}
+              disabled={locationLoading}
+            >
               <View style={styles.locationIcon}>
-                <Ionicons name="location" size={19} color="#0A9FB5" />
+                {locationLoading ? (
+                  <ActivityIndicator size="small" color="#0A9FB5" />
+                ) : (
+                  <Ionicons name="location" size={19} color="#0A9FB5" />
+                )}
               </View>
 
-              <View>
+              <View style={styles.locationTextContainer}>
                 <Text style={styles.locationLabel}>Your Location</Text>
                 <View style={styles.locationRow}>
-                  <Text style={styles.locationText}>Select your location</Text>
+                  <Text
+                    style={styles.locationText}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {locationLoading ? "Detecting current location..." : locationText}
+                  </Text>
                   <Ionicons
                     name="chevron-down"
                     size={14}
@@ -85,14 +169,25 @@ export default function HomeScreen() {
                   />
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.profileButton}
               onPress={() => router.push("/(tabs)/profile")}
               activeOpacity={0.8}
             >
-              <Ionicons name="person-outline" size={20} color="#182A33" />
+              {profilePictureLoading ? (
+                <ActivityIndicator size="small" color="#0A9FB5" />
+              ) : profilePicture ? (
+                <Image
+                  source={profilePicture}
+                  style={styles.profileImage}
+                  resizeMode="cover"
+                  onError={() => setProfilePicture(null)}
+                />
+              ) : (
+                <Ionicons name="person-outline" size={20} color="#182A33" />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -174,43 +269,6 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Popular Services */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Popular Services</Text>
-
-            <TouchableOpacity>
-              <Text style={styles.viewAll}>View all</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.popularContainer}>
-            {popularServices.map((service) => (
-              <TouchableOpacity
-                key={service.title}
-                style={styles.popularItem}
-                activeOpacity={0.7}
-              >
-                <View style={styles.popularIcon}>
-                  <Ionicons
-                    name={service.icon}
-                    size={20}
-                    color="#0A9FB5"
-                  />
-                </View>
-
-                <Text style={styles.popularText}>
-                  {service.title}
-                </Text>
-
-                <Ionicons
-                  name="chevron-forward"
-                  size={17}
-                  color="#91A6AE"
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-
           {/* Trust message */}
           <View style={styles.trustCard}>
             <Ionicons
@@ -262,6 +320,12 @@ const styles = StyleSheet.create({
   locationContainer: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+    marginRight: 10,
+  },
+
+  locationTextContainer: {
+    flexShrink: 1,
   },
 
   locationIcon: {
@@ -301,6 +365,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#D7E8EB",
+    overflow: "hidden",
+  },
+
+  profileImage: {
+    width: "100%",
+    height: "100%",
   },
 
   greeting: {
@@ -351,11 +421,6 @@ const styles = StyleSheet.create({
     color: "#10242C",
   },
 
-  viewAll: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0A9FB5",
-  },
 
   serviceGrid: {
     flexDirection: "row",
@@ -439,41 +504,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  popularContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#D7E8EB",
-    overflow: "hidden",
-    marginBottom: 20,
-  },
-
-  popularItem: {
-    minHeight: 60,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 13,
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEF6F7",
-  },
-
-  popularIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#EAF9FC",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 11,
-  },
-
-  popularText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#344B55",
   },
 
   trustCard: {

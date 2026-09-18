@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import ProfilePicturePicker from "../../components/ProfilePicturePicker";
 import { useAuth } from "../../context/auth-context";
 
 export default function ProfileScreen() {
@@ -21,9 +22,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="person-outline" size={36} color="#2563EB" />
-        </View>
+        <ProfilePicturePicker owner="USER" user={user} size={104} />
 
         <Text style={styles.title}>{user?.email || "Your Profile"}</Text>
 

@@ -39,7 +39,21 @@
         }
       ],
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow CareNow to access your photos so you can update your profile picture.",
+          "cameraPermission": "Allow CareNow to use your camera so you can take a profile picture.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow CareNow to use your location to show your current location and connect you with nearby healthcare services."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
