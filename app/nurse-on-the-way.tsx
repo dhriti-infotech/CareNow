@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE, type Region } from "react-native-maps";
+import MapView, { Marker, Polyline, type Region } from "react-native-maps";
+import MapTilerLiveMap from "../components/MapTilerLiveMap";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -197,11 +198,17 @@ export default function NurseOnTheWayScreen() {
       sheetHeight.setValue(nextHeight);
     },
     onPanResponderRelease: (_, gestureState) => {
-      const shouldExpand = gestureState.dy < -45 || (sheetStartHeight.current > 350 && gestureState.dy < 15);
-      const shouldCollapse = gestureState.dy > 45;
-      if (shouldExpand && !shouldCollapse) animateSheet(true);
-      else if (shouldCollapse) animateSheet(false);
-      else animateSheet(sheetStartHeight.current > 350);
+      if (Math.abs(gestureState.dy) < 18) {
+        animateSheet(!sheetExpanded);
+        return;
+      }
+      if (gestureState.dy < -45) {
+        animateSheet(true);
+      } else if (gestureState.dy > 45) {
+        animateSheet(false);
+      } else {
+        animateSheet(sheetStartHeight.current > 350);
+      }
     },
     onPanResponderTerminate: () => animateSheet(sheetStartHeight.current > 350),
   }), [animateSheet, sheetExpanded, sheetHeight]);
@@ -238,6 +245,12 @@ export default function NurseOnTheWayScreen() {
         </View>
 
         {destinationAvailable ? (
+          Platform.OS === "android" ? (
+            <MapTilerLiveMap
+              patient={{ latitude: patientLatitude!, longitude: patientLongitude! }}
+              nurse={nurseAvailable ? { latitude: nurseLatitude!, longitude: nurseLongitude! } : null}
+            />
+          ) : (
           <MapView
             ref={mapRef}
             style={styles.map}
@@ -266,7 +279,6 @@ export default function NurseOnTheWayScreen() {
                 longitudeDelta: region.longitudeDelta,
               });
             }}
-            provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
             initialRegion={initialRegion}
             showsCompass
             showsScale
@@ -304,6 +316,7 @@ export default function NurseOnTheWayScreen() {
               />
             )}
           </MapView>
+          )
         ) : (
           <View style={styles.mapFallback}>
             <Ionicons name="map-outline" size={42} color="#94A3B8" />
@@ -313,13 +326,7 @@ export default function NurseOnTheWayScreen() {
 
         <Animated.View style={[styles.bottomSheet, { height: sheetHeight }]}>
           <View style={styles.handleHitArea} {...sheetPanResponder.panHandlers}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => animateSheet(!sheetExpanded)}
-              style={styles.handlePressTarget}
-            >
-              <View style={styles.handle} />
-            </TouchableOpacity>
+            <View style={styles.handle} />
           </View>
 
           <View style={styles.nurseRow}>

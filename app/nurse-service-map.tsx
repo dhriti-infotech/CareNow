@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
+import MapView, { Marker, Polyline, type Region } from 'react-native-maps';
+import MapTilerLiveMap from '../components/MapTilerLiveMap';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  PanResponder,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -57,6 +60,46 @@ export default function NurseServiceMapScreen() {
   const [nurseLocation, setNurseLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionBusy, setActionBusy] = useState(false);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
+  const sheetHeight = useRef(new Animated.Value(245)).current;
+  const sheetStartHeight = useRef(245);
+
+  const animateSheet = useCallback((expanded: boolean) => {
+    setSheetExpanded(expanded);
+    Animated.spring(sheetHeight, {
+      toValue: expanded ? 470 : 245,
+      useNativeDriver: false,
+      tension: 55,
+      friction: 9,
+    }).start();
+  }, [sheetHeight]);
+
+  const sheetPanResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gestureState) =>
+      Math.abs(gestureState.dy) > 4 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+    onPanResponderTerminationRequest: () => false,
+    onShouldBlockNativeResponder: () => true,
+    onPanResponderGrant: () => {
+      sheetStartHeight.current = sheetExpanded ? 470 : 245;
+    },
+    onPanResponderMove: (_, gestureState) => {
+      const nextHeight = Math.max(225, Math.min(560, sheetStartHeight.current - gestureState.dy));
+      sheetHeight.setValue(nextHeight);
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      if (Math.abs(gestureState.dy) < 18) {
+        animateSheet(!sheetExpanded);
+      } else if (gestureState.dy < -45) {
+        animateSheet(true);
+      } else if (gestureState.dy > 45) {
+        animateSheet(false);
+      } else {
+        animateSheet(sheetStartHeight.current > 350);
+      }
+    },
+    onPanResponderTerminate: () => animateSheet(sheetStartHeight.current > 350),
+  }), [animateSheet, sheetExpanded, sheetHeight]);
 
   const loadRequest = useCallback(async () => {
     if (!requestId) return;
@@ -207,10 +250,15 @@ export default function NurseServiceMapScreen() {
         </View>
 
         {destinationAvailable ? (
+          Platform.OS === 'android' ? (
+            <MapTilerLiveMap
+              patient={{ latitude: patientLatitude!, longitude: patientLongitude! }}
+              nurse={nurseLocation}
+            />
+          ) : (
           <MapView
             ref={mapRef}
             style={styles.map}
-            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
             initialRegion={initialRegion}
             showsCompass
             showsScale
@@ -243,6 +291,7 @@ export default function NurseServiceMapScreen() {
               />
             )}
           </MapView>
+          )
         ) : (
           <View style={styles.mapFallback}>
             <Ionicons name="location-outline" size={44} color="#94A3B8" />
@@ -250,8 +299,10 @@ export default function NurseServiceMapScreen() {
           </View>
         )}
 
-        <View style={styles.bottomSheet}>
-          <View style={styles.handle} />
+        <Animated.View style={[styles.bottomSheet, { height: sheetHeight }]}>
+          <View style={styles.handleHitArea} {...sheetPanResponder.panHandlers}>
+            <View style={styles.handle} />
+          </View>
           <View style={styles.patientRow}>
             <View style={styles.patientIcon}>
               <Ionicons name="person" size={28} color="#0EA5B7" />
@@ -267,6 +318,25 @@ export default function NurseServiceMapScreen() {
             <View style={styles.statusDot} />
             <Text style={styles.statusText}>{statusLabel(request.status)}</Text>
           </View>
+
+          {sheetExpanded && (
+            <View style={styles.expandedInfo}>
+              <View style={styles.expandedRow}>
+                <Ionicons name="person-outline" size={20} color="#0EA5B7" />
+                <View style={styles.expandedTextWrap}>
+                  <Text style={styles.expandedLabel}>Patient</Text>
+                  <Text style={styles.expandedValue}>{request.patientName}</Text>
+                </View>
+              </View>
+              <View style={styles.expandedRow}>
+                <Ionicons name="location-outline" size={20} color="#0EA5B7" />
+                <View style={styles.expandedTextWrap}>
+                  <Text style={styles.expandedLabel}>Service location</Text>
+                  <Text style={styles.expandedValue} numberOfLines={3}>{request.locationAddress || 'Patient service location'}</Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           {action && (
             <TouchableOpacity
@@ -289,7 +359,7 @@ export default function NurseServiceMapScreen() {
               )}
             </TouchableOpacity>
           )}
-        </View>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -336,7 +406,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 9, paddingBottom: 20, shadowColor: '#000',
     shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: -4 }, elevation: 12,
   },
-  handle: { alignSelf: 'center', width: 44, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', marginBottom: 14 },
+  handleHitArea: { height: 44, alignItems: 'center', justifyContent: 'center' },
+  handle: { width: 48, height: 5, borderRadius: 3, backgroundColor: '#CBD5E1' },
   patientRow: { flexDirection: 'row', alignItems: 'center' },
   patientIcon: { width: 62, height: 62, borderRadius: 31, backgroundColor: '#EAF8FA', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#C9EEF2' },
   patientInfo: { flex: 1, marginLeft: 14 },
@@ -346,6 +417,11 @@ const styles = StyleSheet.create({
   statusPill: { marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ECFDF5', borderRadius: 18, paddingVertical: 8 },
   statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#16A34A', marginRight: 7 },
   statusText: { fontSize: 12, fontWeight: '800', color: '#15803D' },
+  expandedInfo: { marginTop: 12, gap: 12 },
+  expandedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  expandedTextWrap: { flex: 1 },
+  expandedLabel: { fontSize: 11, fontWeight: '700', color: '#64748B' },
+  expandedValue: { marginTop: 2, fontSize: 13, lineHeight: 18, fontWeight: '700', color: '#102A43' },
   primaryButton: { marginTop: 12, height: 52, borderRadius: 14, backgroundColor: '#0EA5B7', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   primaryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
