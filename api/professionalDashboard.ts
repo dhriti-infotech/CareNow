@@ -6,12 +6,14 @@ export type DashboardRequest = {
   patientAge?: number | null;
   serviceType: string;
   locationAddress: string;
+  latitude: number | string | null;
+  longitude: number | string | null;
   distanceKm?: number | null;
   offeredPrice: number;
   requestedAt: string;
   priority: 'NORMAL' | 'URGENT';
   notes?: string | null;
-  status: 'SEARCHING' | 'OFFERED' | 'ACCEPTED' | 'EN_ROUTE' | 'ARRIVED' | 'IN_SERVICE' | 'COMPLETED' | 'CANCELLED';
+  status: 'SEARCHING' | 'OFFERED' | 'ACCEPTED' | 'EN_ROUTE' | 'ARRIVED' | 'IN_SERVICE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
 };
 
 export type NurseDashboard = {
@@ -40,6 +42,7 @@ export type NurseDashboard = {
   };
   newServiceRequests: DashboardRequest[];
   activeServices: DashboardRequest[];
+  todayActivity: DashboardRequest[];
 };
 
 export const getNurseDashboard = async () =>

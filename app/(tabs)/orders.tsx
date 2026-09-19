@@ -13,8 +13,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
+  getPatientRequestOffers,
   getPatientRequests,
   type NurseServiceRequestStatus,
+  type PatientNurseOffer,
   type PatientServiceRequest,
 } from "../../api/patientRequests";
 
@@ -27,6 +29,7 @@ const statusLabels: Record<NurseServiceRequestStatus, string> = {
   IN_SERVICE: "Service in progress",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
+  EXPIRED: "Expired",
 };
 
 const statusColors: Record<NurseServiceRequestStatus, string> = {
@@ -38,13 +41,35 @@ const statusColors: Record<NurseServiceRequestStatus, string> = {
   IN_SERVICE: "#15803D",
   COMPLETED: "#475569",
   CANCELLED: "#B91C1C",
+  EXPIRED: "#B45309",
 };
 
 export default function OrdersScreen() {
   const [requests, setRequests] = useState<PatientServiceRequest[]>([]);
+  const [offersByRequestId, setOffersByRequestId] = useState<Record<string, PatientNurseOffer[]>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadOffersForRequests = useCallback(async (data: PatientServiceRequest[]) => {
+    const pendingRequests = data.filter(
+      (request) => request.status === "SEARCHING" || request.status === "OFFERED"
+    );
+
+    const offerEntries = await Promise.all(
+      pendingRequests.map(async (request) => {
+        try {
+          const offers = await getPatientRequestOffers(request.requestId);
+          return [request.requestId, offers] as const;
+        } catch (offerError) {
+          console.warn(`Unable to load offers for request ${request.requestId}`, offerError);
+          return [request.requestId, []] as const;
+        }
+      })
+    );
+
+    setOffersByRequestId(Object.fromEntries(offerEntries));
+  }, []);
 
   const loadRequests = useCallback(async (isRefresh = false) => {
     try {
@@ -54,6 +79,7 @@ export default function OrdersScreen() {
 
       const data = await getPatientRequests();
       setRequests(data);
+      await loadOffersForRequests(data);
     } catch (err: any) {
       console.warn("Unable to load patient requests", err);
       setError(err?.message ?? "Unable to load your requests.");
@@ -61,16 +87,17 @@ export default function OrdersScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [loadOffersForRequests]);
 
   const refreshRequestsSilently = useCallback(async () => {
     try {
       const data = await getPatientRequests();
       setRequests(data);
+      await loadOffersForRequests(data);
     } catch (err) {
       console.warn("Unable to refresh patient requests", err);
     }
-  }, []);
+  }, [loadOffersForRequests]);
 
   useFocusEffect(
     useCallback(() => {
@@ -86,7 +113,61 @@ export default function OrdersScreen() {
     return () => clearInterval(interval);
   }, [refreshRequestsSilently]);
 
+  const getStatusPresentation = (request: PatientServiceRequest) => {
+    const offers = offersByRequestId[request.requestId] ?? [];
+
+    if (request.status === "SEARCHING") {
+      const hasActiveOffer = offers.some((offer) => offer.status === "OFFERED");
+      const hasDeclinedOffer = offers.some((offer) => offer.status === "DECLINED");
+
+      if (!hasActiveOffer && hasDeclinedOffer) {
+        return { label: "Nurse declined — finding another nurse", color: "#B45309" };
+      }
+    }
+
+    if (request.status === "OFFERED") {
+      const activeOfferCount = offers.filter((offer) => offer.status === "OFFERED").length;
+      return {
+        label: `${activeOfferCount || offers.length} nurse${(activeOfferCount || offers.length) === 1 ? "" : "s"} notified`,
+        color: statusColors[request.status],
+      };
+    }
+
+    return {
+      label: statusLabels[request.status],
+      color: statusColors[request.status],
+    };
+  };
+
   const openRequest = (request: PatientServiceRequest) => {
+    const trackingStatuses: NurseServiceRequestStatus[] = [
+      "ACCEPTED",
+      "EN_ROUTE",
+      "ARRIVED",
+      "IN_SERVICE",
+    ];
+
+    if (trackingStatuses.includes(request.status)) {
+      router.push({
+        pathname: "/nurse-on-the-way",
+        params: { requestId: request.requestId },
+      });
+      return;
+    }
+
+    if (request.status === "COMPLETED") {
+      router.push({
+        pathname: "/rate-service",
+        params: {
+          requestId: request.requestId,
+          nurseName: request.professionalName || "Your nurse",
+          serviceType: request.serviceType,
+          amount: String(request.offeredPrice ?? ""),
+        },
+      });
+      return;
+    }
+
     router.push({
       pathname: "/nurse-request-submitted",
       params: {
@@ -176,22 +257,27 @@ export default function OrdersScreen() {
             <View style={styles.requestDivider} />
 
             <View style={styles.requestBottomRow}>
-              <View style={styles.statusBadge}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: statusColors[request.status] },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.statusText,
-                    { color: statusColors[request.status] },
-                  ]}
-                >
-                  {statusLabels[request.status]}
-                </Text>
-              </View>
+              {(() => {
+                const status = getStatusPresentation(request);
+                return (
+                  <View style={styles.statusBadge}>
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: status.color },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.statusText,
+                        { color: status.color },
+                      ]}
+                    >
+                      {status.label}
+                    </Text>
+                  </View>
+                );
+              })()}
 
               <Text style={styles.price}>₹{request.offeredPrice.toFixed(0)}</Text>
             </View>

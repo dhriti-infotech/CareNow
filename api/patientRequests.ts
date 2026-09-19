@@ -9,7 +9,8 @@ export type NurseServiceRequestStatus =
   | 'ARRIVED'
   | 'IN_SERVICE'
   | 'COMPLETED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'EXPIRED';
 
 export type CreateNurseServiceRequest = {
   serviceType: string;
@@ -71,3 +72,12 @@ export const getPatientRequestOffers = async (requestId: string) =>
 
 export const cancelPatientRequest = async (requestId: string) =>
   (await apiClient.post<PatientServiceRequest>(`/api/user/patient/requests/${requestId}/cancel`)).data;
+
+
+export type CreateNurseRatingRequest = {
+  rating: number;
+  review?: string;
+};
+
+export const ratePatientRequest = async (requestId: string, input: CreateNurseRatingRequest) =>
+  (await apiClient.post<PatientServiceRequest>(`/api/user/patient/requests/${requestId}/rating`, input)).data;

@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { getProfilePictureSource, uploadProfilePicture, type ProfilePictureOwner } from '../api/profilePicture';
 import type { AuthUser } from '../types/auth';
@@ -23,7 +25,7 @@ type Props = {
 
 export default function ProfilePicturePicker({ owner, user, size = 104, onUpdated }: Props) {
   const [version, setVersion] = useState(0);
-  const [source, setSource] = useState<{ uri: string; headers: { Authorization: string } } | null>(null);
+  const [source, setSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasPicture, setHasPicture] = useState(true);
 
@@ -54,6 +56,7 @@ export default function ProfilePicturePicker({ owner, user, size = 104, onUpdate
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.85,
+      preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -83,7 +86,25 @@ export default function ProfilePicturePicker({ owner, user, size = 104, onUpdate
   const savePicture = async (asset: ImagePicker.ImagePickerAsset) => {
     try {
       setLoading(true);
-      await uploadProfilePicture(owner, asset);
+
+      // Normalize every newly selected photo to JPEG before upload. This
+      // prevents iPhone HEIC/HEIF originals from being stored as a format
+      // that some Android decoders may not render consistently.
+      const normalized = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        [],
+        {
+          compress: 0.88,
+          format: ImageManipulator.SaveFormat.JPEG,
+        },
+      );
+
+      await uploadProfilePicture(owner, {
+        uri: normalized.uri,
+        fileName: `profile-${Date.now()}.jpg`,
+        mimeType: 'image/jpeg',
+      });
+
       setHasPicture(true);
       setVersion(Date.now());
       onUpdated?.();
@@ -113,7 +134,7 @@ export default function ProfilePicturePicker({ owner, user, size = 104, onUpdate
         <Image
           source={source}
           style={{ width: size - 10, height: size - 10, borderRadius: (size - 10) / 2 }}
-          resizeMode="cover"
+          contentFit="cover"
           onError={() => {
             setHasPicture(false);
             setSource(null);

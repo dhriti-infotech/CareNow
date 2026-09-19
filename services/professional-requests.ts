@@ -6,6 +6,7 @@ export interface ServiceRequest {
   requestedAt: string;
   offeredPrice: number;
   priority: "NORMAL" | "URGENT";
+  status?: "SEARCHING" | "OFFERED" | "ACCEPTED" | "EN_ROUTE" | "ARRIVED" | "IN_SERVICE" | "COMPLETED" | "CANCELLED" | "EXPIRED";
 }
 
 export interface PrescriptionOrder {

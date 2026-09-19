@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import * as Location from "expo-location";
 import { router, useFocusEffect } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -182,7 +182,7 @@ export default function HomeScreen() {
                 <Image
                   source={profilePicture}
                   style={styles.profileImage}
-                  resizeMode="cover"
+                  contentFit="cover"
                   onError={() => setProfilePicture(null)}
                 />
               ) : (

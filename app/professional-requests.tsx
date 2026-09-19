@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -17,6 +18,8 @@ import {
   acceptNurseRequest,
   declineNurseRequest,
   getNurseRequests,
+  getNurseProfile,
+  updateNurseLocation,
   type NurseServiceRequest,
 } from '../api/professionalRequests';
 
@@ -26,6 +29,7 @@ export default function ProfessionalRequestsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
+  const [trackingActive, setTrackingActive] = useState(false);
 
   const loadRequests = useCallback(async (refresh = false) => {
     try {
@@ -52,13 +56,57 @@ export default function ProfessionalRequestsScreen() {
     return () => clearInterval(interval);
   }, [loadRequests]);
 
+  useEffect(() => {
+    let active = true;
+    void getNurseProfile()
+      .then((profile) => {
+        if (active) setTrackingActive(profile.availabilityStatus === 'BUSY');
+      })
+      .catch((error) => console.warn('Unable to check nurse tracking status', error));
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!trackingActive) return;
+    let cancelled = false;
+    let subscription: Location.LocationSubscription | null = null;
+
+    const startTracking = async () => {
+      try {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (permission.status !== Location.PermissionStatus.GRANTED) return;
+        if (cancelled) return;
+
+        subscription = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
+          (position) => {
+            if (cancelled) return;
+            void updateNurseLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            }).catch((error) => console.warn('Unable to update nurse live location', error));
+          },
+        );
+      } catch (error) {
+        console.warn('Unable to start nurse tracking', error);
+      }
+    };
+
+    void startTracking();
+    return () => {
+      cancelled = true;
+      subscription?.remove();
+    };
+  }, [trackingActive]);
+
   const handleAccept = async (requestId: string) => {
     if (busyRequestId) return;
     setBusyRequestId(requestId);
     try {
       await acceptNurseRequest(requestId);
+      setTrackingActive(true);
       setRequests((current) => current.filter((item) => item.requestId !== requestId));
-      Alert.alert('Request accepted', 'The patient has been notified that you accepted the request.');
+      router.push({ pathname: '/nurse-service-map', params: { requestId } });
     } catch (error: any) {
       Alert.alert('Unable to accept request', error?.message ?? 'This request may no longer be available.');
       await loadRequests(true);
@@ -73,6 +121,7 @@ export default function ProfessionalRequestsScreen() {
     try {
       await declineNurseRequest(requestId);
       setRequests((current) => current.filter((item) => item.requestId !== requestId));
+      Alert.alert('Request declined', 'The request has been declined and will be offered to another eligible nurse when available.');
     } catch (error: any) {
       Alert.alert('Unable to decline request', error?.message ?? 'Please try again.');
     } finally {

@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import * as Location from "expo-location";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,6 +21,7 @@ import {
   getNurseProfile,
   getNurseRequests,
   updateNurseAvailability,
+  updateNurseLocation,
   type NurseAvailabilityStatus,
   type NurseProfile
 } from "../api/professionalRequests";
@@ -46,10 +47,7 @@ export default function ProfessionalHomeScreen() {
   const [nurseProfile, setNurseProfile] = useState<NurseProfile | null>(null);
   const [dashboard, setDashboard] = useState<NurseDashboard | null>(null);
   const [availabilityUpdating, setAvailabilityUpdating] = useState(false);
-  const [profilePictureSource, setProfilePictureSource] = useState<{
-    uri: string;
-    headers: { Authorization: string };
-  } | null>(null);
+  const [profilePictureSource, setProfilePictureSource] = useState<string | null>(null);
 
   /*
    * Load the logged-in professional.
@@ -171,6 +169,55 @@ export default function ProfessionalHomeScreen() {
     void registerProfessionalPushNotifications();
   }, [authUser?.role, status]);
 
+  // Keep the nurse's GPS position fresh while they are AVAILABLE or BUSY.
+  // BUSY is the state used after accepting a patient request, so this keeps
+  // the patient's tracking map updated during the journey.
+  useEffect(() => {
+    if (authUser?.role !== "PROFESSIONAL" || status !== "APPROVED") return;
+    if (nurseProfile?.availabilityStatus !== "AVAILABLE" && nurseProfile?.availabilityStatus !== "BUSY") return;
+
+    let cancelled = false;
+    let subscription: Location.LocationSubscription | null = null;
+
+    const startLocationUpdates = async () => {
+      try {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (permission.status !== Location.PermissionStatus.GRANTED) {
+          console.warn("Location permission is required for live nurse tracking");
+          return;
+        }
+
+        if (cancelled) return;
+
+        subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 5000,
+            distanceInterval: 10,
+          },
+          (position) => {
+            if (cancelled) return;
+            void updateNurseLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            }).catch((error) => {
+              console.warn("Unable to update nurse live location", error);
+            });
+          },
+        );
+      } catch (error) {
+        console.warn("Unable to start nurse location tracking", error);
+      }
+    };
+
+    void startLocationUpdates();
+
+    return () => {
+      cancelled = true;
+      subscription?.remove();
+    };
+  }, [authUser?.role, status, nurseProfile?.availabilityStatus]);
+
   // Keep the dashboard and request list current while the dashboard is open.
 
   // This allows a newly-created patient request to appear without requiring
@@ -204,9 +251,10 @@ export default function ProfessionalHomeScreen() {
   }, [authUser?.role, status, nurseProfile?.availabilityStatus]);
 
   const activityRequests = useMemo(() => {
-    const active = dashboard?.activeServices ?? [];
-    const offered = dashboard?.newServiceRequests ?? [];
-    return [...active, ...offered]
+    // The backend supplies a date-filtered activity list. Do not reconstruct
+    // Today's Activity from active/new requests because completed services
+    // would disappear and yesterday's still-active requests could leak in.
+    return (dashboard?.todayActivity ?? [])
       .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime())
       .slice(0, 3);
   }, [dashboard]);
@@ -326,7 +374,7 @@ export default function ProfessionalHomeScreen() {
                 <Image
                   source={profilePictureSource}
                   style={styles.avatarImage}
-                  resizeMode="cover"
+                  contentFit="cover"
                   onError={() => setProfilePictureSource(null)}
                 />
               ) : (
@@ -407,7 +455,13 @@ export default function ProfessionalHomeScreen() {
               key={request.requestId}
               style={styles.activityCard}
               activeOpacity={0.85}
-              onPress={() => router.push({ pathname: "/professional-requests", params: { requestId: request.requestId } })}
+              onPress={() => {
+                if (request.status === "ACCEPTED" || request.status === "EN_ROUTE" || request.status === "ARRIVED" || request.status === "IN_SERVICE") {
+                  router.push({ pathname: "/nurse-service-map", params: { requestId: request.requestId } });
+                } else {
+                  router.push({ pathname: "/professional-requests", params: { requestId: request.requestId } });
+                }
+              }}
             >
               <View style={styles.activityIcon}>
                 <Ionicons
@@ -433,7 +487,7 @@ export default function ProfessionalHomeScreen() {
 
         {/* CareNow banner */}
         <View style={styles.careBanner}>
-          <Image source={require("../assets/images/professional-home-img-1.png")} style={styles.careBannerImage} resizeMode="cover" />
+          <Image source={require("../assets/images/professional-home-img-1.png")} style={styles.careBannerImage} contentFit="cover" />
           <View style={styles.careBannerOverlay}>
             {/* <Text style={styles.careBannerTitle}>Care at home.</Text>
             <Text style={styles.careBannerSubtitle}>A healthier tomorrow.</Text> */}
@@ -654,6 +708,7 @@ function mapNurseRequest(request: {
   offeredPrice: number;
   requestedAt: string;
   priority: "NORMAL" | "URGENT";
+  status?: ServiceRequest["status"];
 }): ServiceRequest {
   return {
     id: request.requestId,
@@ -666,6 +721,7 @@ function mapNurseRequest(request: {
     requestedAt: formatRequestTime(request.requestedAt),
     offeredPrice: request.offeredPrice,
     priority: request.priority,
+    status: request.status,
   };
 }
 

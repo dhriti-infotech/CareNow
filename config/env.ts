@@ -2,7 +2,7 @@
 const API_PORT = 8082;
 
 // Expo Go running on a physical device must use this machine's LAN address.
-const DEV_HOST = '192.168.1.3';
+const DEV_HOST = '192.168.1.7';
 
 const getDevelopmentApiBaseUrl = () => {
   return `http://${DEV_HOST}:${API_PORT}`;

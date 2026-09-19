@@ -24,6 +24,9 @@ const careNames: Record<string, string> = {
   wound: "Wound Care",
 };
 
+const isTrackingStatus = (status: NurseServiceRequestStatus) =>
+  status === "ACCEPTED" || status === "EN_ROUTE" || status === "ARRIVED" || status === "IN_SERVICE";
+
 export default function NurseRequestSubmittedScreen() {
   const { patientName, careType, serviceType, urgency, requestId } =
     useLocalSearchParams<{
@@ -40,6 +43,7 @@ export default function NurseRequestSubmittedScreen() {
     useState<string | null>(null);
   const [offers, setOffers] = useState<PatientNurseOffer[]>([]);
   const acceptedNotifiedRef = useRef(false);
+  const trackingOpenedRef = useRef(false);
 
   const careName =
     serviceType || careNames[careType ?? ""] || "Nursing Care";
@@ -66,6 +70,19 @@ export default function NurseRequestSubmittedScreen() {
 
         setRequestStatus(request.status);
         setAssignedProfessionalName(request.professionalName ?? null);
+
+        if (
+          isTrackingStatus(request.status) &&
+          request.professionalId &&
+          !trackingOpenedRef.current
+        ) {
+          trackingOpenedRef.current = true;
+          router.replace({
+            pathname: "/nurse-on-the-way",
+            params: { requestId },
+          });
+          return;
+        }
 
         if (
           statusChangedToAccepted &&
@@ -109,12 +126,22 @@ export default function NurseRequestSubmittedScreen() {
 
   const statusLabel = (() => {
     switch (requestStatus) {
-      case "OFFERED":
-        return `${offers.length} nurse${offers.length === 1 ? "" : "s"} notified`;
+      case "OFFERED": {
+        const activeOfferCount = offers.filter((offer) => offer.status === "OFFERED").length;
+        return `${activeOfferCount || offers.length} nurse${(activeOfferCount || offers.length) === 1 ? "" : "s"} notified`;
+      }
+      case "SEARCHING": {
+        const hasActiveOffer = offers.some((offer) => offer.status === "OFFERED");
+        const hasDeclinedOffer = offers.some((offer) => offer.status === "DECLINED");
+        if (!hasActiveOffer && hasDeclinedOffer) {
+          return "Nurse declined — finding another nurse";
+        }
+        return "Finding a nurse";
+      }
       case "ACCEPTED":
         return assignedProfessionalName
-          ? `Nurse assigned: ${assignedProfessionalName}`
-          : "Nurse assigned";
+          ? `${assignedProfessionalName} is getting ready`
+          : "Nurse is getting ready";
       case "EN_ROUTE":
         return "Nurse is on the way";
       case "ARRIVED":
@@ -125,6 +152,8 @@ export default function NurseRequestSubmittedScreen() {
         return "Service completed";
       case "CANCELLED":
         return "Request cancelled";
+      case "EXPIRED":
+        return "Request expired";
       default:
         return "Finding a nurse";
     }

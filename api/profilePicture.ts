@@ -1,6 +1,5 @@
 import apiClient from './client';
-import { API_BASE_URL } from '../config/env';
-import { AuthStorage } from '../services/auth-storage';
+import { downloadAuthenticatedImage } from './authenticatedImage';
 
 export type ProfilePictureOwner = 'USER' | 'PROFESSIONAL';
 
@@ -27,14 +26,14 @@ export async function uploadProfilePicture(owner: ProfilePictureOwner, asset: {
   });
 }
 
+/**
+ * Returns a local file URI rather than an authenticated remote URL.
+ * The image is downloaded with the existing JWT and normalized to JPEG so
+ * Android and iOS render the same bytes.
+ */
 export async function getProfilePictureSource(owner: ProfilePictureOwner, version: number) {
-  const token = await AuthStorage.getToken();
-  if (!token) return null;
-
-  return {
-    uri: `${API_BASE_URL}${endpointFor(owner)}?v=${version}`,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
+  return downloadAuthenticatedImage(
+    `${endpointFor(owner)}?v=${version}`,
+    `profile-${owner}-${version}`,
+  );
 }

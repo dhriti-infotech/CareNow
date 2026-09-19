@@ -53,6 +53,13 @@
         {
           "locationWhenInUsePermission": "Allow CareNow to use your location to show your current location and connect you with nearby healthcare services."
         }
+      ],
+      [
+        "react-native-maps",
+        {
+          "androidGoogleMapsApiKey": "AIza67andriod",
+          "iosGoogleMapsApiKey": "AIza768ios"
+        }
       ]
     ],
     "experiments": {
