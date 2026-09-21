@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -17,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   acceptNurseRequest,
   declineNurseRequest,
+  getNursePlatformFee,
   getNurseRequests,
   getNurseProfile,
   updateNurseLocation,
@@ -30,13 +33,20 @@ export default function ProfessionalRequestsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
   const [trackingActive, setTrackingActive] = useState(false);
+  const [platformFeeDue, setPlatformFeeDue] = useState(0);
+  const [platformFeeModalVisible, setPlatformFeeModalVisible] = useState(false);
+  const [payLaterAcknowledged, setPayLaterAcknowledged] = useState(false);
 
   const loadRequests = useCallback(async (refresh = false) => {
     try {
       if (refresh) setRefreshing(true);
       else setLoading(true);
-      const data = await getNurseRequests();
+      const [data, fee] = await Promise.all([
+        getNurseRequests(),
+        getNursePlatformFee(),
+      ]);
       setRequests(data);
+      setPlatformFeeDue(Number(fee.dueAmount ?? 0));
     } catch (error: any) {
       Alert.alert('Unable to load requests', error?.message ?? 'Please try again.');
     } finally {
@@ -108,7 +118,23 @@ export default function ProfessionalRequestsScreen() {
       setRequests((current) => current.filter((item) => item.requestId !== requestId));
       router.push({ pathname: '/nurse-service-map', params: { requestId } });
     } catch (error: any) {
-      Alert.alert('Unable to accept request', error?.message ?? 'This request may no longer be available.');
+      if (error?.code === 'PAYMENT_REQUIRED' || /outstanding CareNow platform fee/i.test(error?.message ?? '')) {
+        const feeFromMessage = Number(String(error?.message ?? '').match(/₹\s*([0-9]+(?:\.[0-9]+)?)/)?.[1]);
+        if (Number.isFinite(feeFromMessage) && feeFromMessage > 0) {
+          setPlatformFeeDue(feeFromMessage);
+        } else {
+          try {
+            const fee = await getNursePlatformFee();
+            setPlatformFeeDue(Number(fee.dueAmount ?? 0));
+          } catch {
+            // Keep the modal usable even if the fee refresh fails.
+          }
+        }
+        setPayLaterAcknowledged(false);
+        setPlatformFeeModalVisible(true);
+      } else {
+        Alert.alert('Unable to accept request', error?.message ?? 'This request may no longer be available.');
+      }
       await loadRequests(true);
     } finally {
       setBusyRequestId(null);
@@ -179,6 +205,74 @@ export default function ProfessionalRequestsScreen() {
           ))
         )}
       </ScrollView>
+
+      <Modal
+        visible={platformFeeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPlatformFeeModalVisible(false)}
+      >
+        <View style={styles.paymentModalOverlay}>
+          <View style={styles.paymentModal}>
+            <View style={styles.paymentModalIcon}>
+              <Ionicons name="wallet-outline" size={28} color="#0A9FB5" />
+            </View>
+
+            <Text style={styles.paymentModalTitle}>CareNow payment due</Text>
+            <Text style={styles.paymentModalSubtitle}>
+              Your previous COD service is completed. A 10% CareNow platform fee is pending.
+              Please settle it before accepting another service request.
+            </Text>
+
+            <View style={styles.feeCard}>
+              <View>
+                <Text style={styles.feeLabel}>Amount payable to CareNow</Text>
+                <Text style={styles.feeAmount}>₹{platformFeeDue.toFixed(2)}</Text>
+              </View>
+              <View style={styles.pendingBadge}>
+                <Text style={styles.pendingBadgeText}>PENDING</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.payNowButton}
+              activeOpacity={0.85}
+              onPress={() =>
+                Alert.alert(
+                  'Online payment coming soon',
+                  'CareNow online payment is not enabled yet. Once the payment gateway is connected, this button will open the secure payment flow and acceptance will unlock only after CareNow confirms the payment.'
+                )
+              }
+            >
+              <Ionicons name="card-outline" size={19} color="#FFFFFF" />
+              <Text style={styles.payNowButtonText}>Pay Now</Text>
+              <Ionicons name="arrow-forward" size={17} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <Pressable
+              style={styles.payLaterRow}
+              onPress={() => setPayLaterAcknowledged((value) => !value)}
+            >
+              <View style={[styles.checkbox, payLaterAcknowledged && styles.checkboxChecked]}>
+                {payLaterAcknowledged && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+              </View>
+              <View style={styles.payLaterTextWrap}>
+                <Text style={styles.payLaterTitle}>Pay later</Text>
+                <Text style={styles.payLaterSubtitle}>
+                  I understand that I cannot accept a new request until this fee is paid and confirmed.
+                </Text>
+              </View>
+            </Pressable>
+
+            <TouchableOpacity
+              style={styles.closePaymentButton}
+              onPress={() => setPlatformFeeModalVisible(false)}
+            >
+              <Text style={styles.closePaymentButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -282,4 +376,24 @@ const styles = StyleSheet.create({
   emptyIcon: { width: 78, height: 78, borderRadius: 39, backgroundColor: '#E7F8F8', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
   emptyTitle: { fontSize: 20, fontWeight: '800', color: '#173B46' },
   emptyText: { marginTop: 8, fontSize: 13, color: '#6F8D99', textAlign: 'center', lineHeight: 20 },
+  paymentModalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.55)', alignItems: 'center', justifyContent: 'center', padding: 22 },
+  paymentModal: { width: '100%', maxWidth: 390, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 22, shadowColor: '#173B46', shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
+  paymentModalIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#E7F8F8', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  paymentModalTitle: { marginTop: 14, fontSize: 21, fontWeight: '900', color: '#173B46', textAlign: 'center' },
+  paymentModalSubtitle: { marginTop: 8, fontSize: 12.5, lineHeight: 19, color: '#607A83', textAlign: 'center' },
+  feeCard: { marginTop: 17, borderRadius: 16, backgroundColor: '#F2FBFB', borderWidth: 1, borderColor: '#CDEEEF', padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  feeLabel: { fontSize: 11, fontWeight: '700', color: '#6F8D99' },
+  feeAmount: { marginTop: 3, fontSize: 25, fontWeight: '900', color: '#173B46' },
+  pendingBadge: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12, backgroundColor: '#FFF4DE' },
+  pendingBadgeText: { fontSize: 9, fontWeight: '900', color: '#B97818' },
+  payNowButton: { marginTop: 15, height: 50, borderRadius: 14, backgroundColor: '#0A9FB5', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  payNowButtonText: { fontSize: 14, fontWeight: '900', color: '#FFFFFF' },
+  payLaterRow: { marginTop: 14, flexDirection: 'row', alignItems: 'flex-start', padding: 12, borderRadius: 14, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  checkbox: { width: 21, height: 21, borderRadius: 6, borderWidth: 1.5, borderColor: '#B8CBD1', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  checkboxChecked: { backgroundColor: '#0A9FB5', borderColor: '#0A9FB5' },
+  payLaterTextWrap: { flex: 1, marginLeft: 10 },
+  payLaterTitle: { fontSize: 13, fontWeight: '900', color: '#173B46' },
+  payLaterSubtitle: { marginTop: 3, fontSize: 10.5, lineHeight: 16, color: '#6F8D99' },
+  closePaymentButton: { marginTop: 12, height: 46, borderRadius: 13, borderWidth: 1, borderColor: '#D7E4E7', alignItems: 'center', justifyContent: 'center' },
+  closePaymentButtonText: { fontSize: 13, fontWeight: '800', color: '#526973' },
 });

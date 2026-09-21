@@ -15,7 +15,7 @@ export type AuthUser = Omit<AuthSession, 'accessToken' | 'tokenType'> & {
 };
 export type AuthResponse = AuthSession;
 export type UserRegistrationRequest = { name: string; email: string; mobile: string; address?: string };
-export type ProfessionalRegistrationRequest = { professionalType: ProfessionalType; fullName: string; email: string; mobile: string; qualification: string; registrationNumber: string; serviceArea: string };
+export type ProfessionalRegistrationRequest = { professionalType: ProfessionalType; fullName: string; email: string; mobile: string; qualification: string; registrationNumber: string; serviceArea: string; age?: number | null; experienceYears?: number | null };
 export type RegistrationResponse = { accountId: string; userProfileId?: string; professionalId?: string; message: string; professionalType?: ProfessionalType; verificationStatus?: ProfessionalVerificationStatus };
 export type VerifyMobileRequest = { mobile: string; otp: string };
 export type LoginOtpRequest = { identifier: string; otp?: string };

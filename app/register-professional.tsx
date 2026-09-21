@@ -49,6 +49,8 @@ export default function RegisterProfessionalScreen() {
     useState("");
   const [serviceArea, setServiceArea] =
     useState("");
+  const [age, setAge] = useState("");
+  const [experienceYears, setExperienceYears] = useState("");
 
   const handleContinue = async () => {
     const cleanedMobile = mobile.replace(/\D/g, "");
@@ -90,6 +92,17 @@ export default function RegisterProfessionalScreen() {
       return;
     }
 
+    const parsedAge = age.trim() ? Number(age) : null;
+    const parsedExperience = experienceYears.trim() ? Number(experienceYears) : null;
+    if (parsedAge !== null && (!Number.isInteger(parsedAge) || parsedAge < 18 || parsedAge > 100)) {
+      Alert.alert("Invalid age", "Please enter an age between 18 and 100.");
+      return;
+    }
+    if (parsedExperience !== null && (!Number.isInteger(parsedExperience) || parsedExperience < 0 || parsedExperience > 60)) {
+      Alert.alert("Invalid experience", "Please enter experience between 0 and 60 years.");
+      return;
+    }
+
     if (!serviceArea.trim()) {
       Alert.alert(
         "Service area required",
@@ -107,6 +120,8 @@ export default function RegisterProfessionalScreen() {
         qualification: qualification.trim(),
         registrationNumber: registrationNumber.trim(),
         serviceArea: serviceArea.trim(),
+        age: parsedAge,
+        experienceYears: parsedExperience,
       });
       await AuthStorage.savePendingRegistration({ kind: "PROFESSIONAL", mobile: cleanedMobile });
       router.push({
@@ -312,6 +327,17 @@ export default function RegisterProfessionalScreen() {
             style={[styles.input, styles.multilineInput]}
             multiline
           />
+
+          <View style={styles.inlineFields}>
+            <View style={styles.inlineField}>
+              <Text style={styles.fieldLabel}>Age</Text>
+              <TextInput value={age} onChangeText={setAge} placeholder="e.g. 32" placeholderTextColor="#98A2B3" keyboardType="number-pad" style={styles.input} maxLength={3} />
+            </View>
+            <View style={styles.inlineField}>
+              <Text style={styles.fieldLabel}>Experience (years)</Text>
+              <TextInput value={experienceYears} onChangeText={setExperienceYears} placeholder="e.g. 8" placeholderTextColor="#98A2B3" keyboardType="number-pad" style={styles.input} maxLength={2} />
+            </View>
+          </View>
 
           <View style={styles.verificationCard}>
             <Ionicons
@@ -606,4 +632,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginRight: 8,
   },
+  inlineFields: { flexDirection: "row", gap: 10, marginTop: 14 },
+  inlineField: { flex: 1 },
 });

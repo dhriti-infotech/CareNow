@@ -71,8 +71,16 @@ export const acceptNurseRequest = async (requestId: string) =>
 export const declineNurseRequest = async (requestId: string) =>
   (await apiClient.post<{ message: string }>(`/api/professional-nurse/requests/${requestId}/decline`)).data;
 
+export type NursePlatformFeeResponse = {
+  dueAmount: number;
+  paymentRequired: boolean;
+};
+
+export const getNursePlatformFee = async () =>
+  (await apiClient.get<NursePlatformFeeResponse>('/api/professional-nurse/platform-fee')).data;
+
 
 export type NurseServiceStatus = 'EN_ROUTE' | 'ARRIVED' | 'IN_SERVICE' | 'COMPLETED' | 'CANCELLED';
 
-export const updateNurseServiceStatus = async (requestId: string, status: NurseServiceStatus) =>
-  (await apiClient.patch<NurseServiceRequest>(`/api/professional-nurse/requests/${requestId}/status`, { status })).data;
+export const updateNurseServiceStatus = async (requestId: string, status: NurseServiceStatus, completionPasscode?: string) =>
+  (await apiClient.patch<NurseServiceRequest>(`/api/professional-nurse/requests/${requestId}/status`, { status, completionPasscode })).data;

@@ -49,6 +49,7 @@ function RootNavigator() {
       <Stack.Screen name="professional-verification" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="request-nurse" options={{ headerShown: false }} />
+      <Stack.Screen name="available-professionals" options={{ headerShown: false }} />
       <Stack.Screen name="nurse-request-submitted" options={{ headerShown: false }} />
       <Stack.Screen name="rate-service" options={{ headerShown: false }} />
     </Stack>

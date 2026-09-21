@@ -20,9 +20,12 @@ export type CreateNurseServiceRequest = {
   latitude: number;
   longitude: number;
   offeredPrice: number;
+  paymentMethod: PaymentMethod;
   priority: NurseRequestPriority;
   notes?: string;
 };
+
+export type PaymentMethod = 'UPI' | 'COD';
 
 export type PatientServiceRequest = {
   requestId: string;
@@ -34,6 +37,8 @@ export type PatientServiceRequest = {
   latitude: number;
   longitude: number;
   offeredPrice: number;
+  paymentMethod: PaymentMethod;
+  completionPasscode?: string | null;
   priority: NurseRequestPriority;
   notes?: string | null;
   status: NurseServiceRequestStatus;
@@ -53,6 +58,7 @@ export type PatientNurseOffer = {
   qualification?: string | null;
   serviceArea?: string | null;
   distanceKm?: number | null;
+  price?: number | null;
   status: 'OFFERED' | 'DECLINED' | 'ACCEPTED' | 'EXPIRED';
   offeredAt: string;
   respondedAt?: string | null;
@@ -60,6 +66,25 @@ export type PatientNurseOffer = {
 
 export const createNurseRequest = async (request: CreateNurseServiceRequest) =>
   (await apiClient.post<PatientServiceRequest>('/api/user/patient/requests', request)).data;
+
+
+export type AvailableProfessional = {
+  professionalId: string;
+  name: string;
+  profession: string;
+  age?: number | null;
+  experienceYears?: number | null;
+  rating: number;
+  ratingCount: number;
+  distanceKm: number;
+  price: number;
+};
+
+export const getAvailableProfessionals = async (requestId: string) =>
+  (await apiClient.get<AvailableProfessional[]>(`/api/user/patient/requests/${requestId}/available-professionals`)).data;
+
+export const continuePatientMatching = async (requestId: string) =>
+  (await apiClient.post<PatientServiceRequest>(`/api/user/patient/requests/${requestId}/continue`)).data;
 
 export const getPatientRequests = async () =>
   (await apiClient.get<PatientServiceRequest[]>('/api/user/patient/requests')).data;

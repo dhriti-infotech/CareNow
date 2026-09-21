@@ -11,6 +11,8 @@ import {
   PanResponder,
   StyleSheet,
   Text,
+  Modal,
+  TextInput,
   TouchableOpacity,
   View,
   Platform,
@@ -60,6 +62,8 @@ export default function NurseServiceMapScreen() {
   const [nurseLocation, setNurseLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionBusy, setActionBusy] = useState(false);
+  const [completionCodeModalVisible, setCompletionCodeModalVisible] = useState(false);
+  const [completionCode, setCompletionCode] = useState("");
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const sheetHeight = useRef(new Animated.Value(245)).current;
   const sheetStartHeight = useRef(245);
@@ -196,6 +200,12 @@ export default function NurseServiceMapScreen() {
     const action = nextAction(request.status);
     if (!action || actionBusy) return;
 
+    if (action.status === "COMPLETED") {
+      setCompletionCode("");
+      setCompletionCodeModalVisible(true);
+      return;
+    }
+
     setActionBusy(true);
     try {
       const updated = await updateNurseServiceStatus(requestId, action.status);
@@ -205,14 +215,27 @@ export default function NurseServiceMapScreen() {
       } else if (action.status === 'ARRIVED') {
         Alert.alert('Arrived', 'You have reached the patient location.');
       } else if (action.status === 'IN_SERVICE') {
-        Alert.alert('Service started', 'The patient can now see that the service has started.');
-      } else if (action.status === 'COMPLETED') {
-        Alert.alert('Service completed', 'The service has been marked completed.', [
-          { text: 'Done', onPress: () => router.replace('/professional-home') },
-        ]);
+        Alert.alert('Service started', 'The patient can now see that the service has started and will receive a completion passcode.');
       }
     } catch (error: any) {
       Alert.alert('Unable to update status', error?.message ?? 'Please try again.');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const submitCompletionCode = async () => {
+    if (!requestId || !completionCode.trim() || completionCode.trim().length !== 6 || actionBusy) return;
+    setActionBusy(true);
+    try {
+      const updated = await updateNurseServiceStatus(requestId, 'COMPLETED', completionCode.trim());
+      setRequest(updated);
+      setCompletionCodeModalVisible(false);
+      Alert.alert('Service completed', 'The patient passcode was verified and the service is now completed.', [
+        { text: 'Done', onPress: () => router.replace('/professional-home') },
+      ]);
+    } catch (error: any) {
+      Alert.alert('Invalid passcode', error?.message ?? 'The completion passcode is incorrect. Please enter the code shown on the patient app.');
     } finally {
       setActionBusy(false);
     }
@@ -361,6 +384,49 @@ export default function NurseServiceMapScreen() {
           )}
         </Animated.View>
       </View>
+
+      <Modal
+        visible={completionCodeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !actionBusy && setCompletionCodeModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.completionModal}>
+            <View style={styles.completionIcon}>
+              <Ionicons name="keypad-outline" size={26} color="#2563EB" />
+            </View>
+            <Text style={styles.completionTitle}>Verify service completion</Text>
+            <Text style={styles.completionSubtitle}>Enter the 6-digit passcode shown on the patient's CareNow screen.</Text>
+            <TextInput
+              value={completionCode}
+              onChangeText={(value) => setCompletionCode(value.replace(/\D/g, "").slice(0, 6))}
+              keyboardType="number-pad"
+              maxLength={6}
+              placeholder="000000"
+              placeholderTextColor="#94A3B8"
+              style={styles.completionInput}
+              autoFocus
+            />
+            <View style={styles.completionActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setCompletionCodeModalVisible(false)}
+                disabled={actionBusy}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.verifyButton, (completionCode.length !== 6 || actionBusy) && styles.verifyButtonDisabled]}
+                onPress={() => void submitCompletionCode()}
+                disabled={completionCode.length !== 6 || actionBusy}
+              >
+                {actionBusy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.verifyButtonText}>Verify & Complete</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -424,6 +490,18 @@ const styles = StyleSheet.create({
   expandedValue: { marginTop: 2, fontSize: 13, lineHeight: 18, fontWeight: '700', color: '#102A43' },
   primaryButton: { marginTop: 12, height: 52, borderRadius: 14, backgroundColor: '#0EA5B7', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   primaryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  completionModal: { width: '100%', maxWidth: 390, backgroundColor: '#FFFFFF', borderRadius: 22, padding: 22 },
+  completionIcon: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  completionTitle: { marginTop: 13, fontSize: 19, fontWeight: '900', color: '#0F172A', textAlign: 'center' },
+  completionSubtitle: { marginTop: 7, fontSize: 12, lineHeight: 18, color: '#64748B', textAlign: 'center' },
+  completionInput: { marginTop: 16, height: 56, borderWidth: 1, borderColor: '#BFDBFE', borderRadius: 13, backgroundColor: '#F8FBFF', textAlign: 'center', fontSize: 24, fontWeight: '900', letterSpacing: 7, color: '#1D4ED8' },
+  completionActions: { flexDirection: 'row', gap: 9, marginTop: 14 },
+  cancelButton: { flex: 1, height: 48, borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', alignItems: 'center', justifyContent: 'center' },
+  cancelButtonText: { fontSize: 13, fontWeight: '800', color: '#475569' },
+  verifyButton: { flex: 1.4, height: 48, borderRadius: 12, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center' },
+  verifyButtonDisabled: { opacity: 0.5 },
+  verifyButtonText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: 10, color: '#64748B', fontSize: 13 },
 });

@@ -16,6 +16,16 @@ export type DashboardRequest = {
   status: 'SEARCHING' | 'OFFERED' | 'ACCEPTED' | 'EN_ROUTE' | 'ARRIVED' | 'IN_SERVICE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
 };
 
+export type NurseActivity = {
+  requestId: string;
+  patientName: string;
+  serviceType: string;
+  activityAt: string;
+  activityStatus: 'OFFERED' | 'DECLINED' | 'EXPIRED' | 'ACCEPTED' | 'EN_ROUTE' | 'ARRIVED' | 'IN_SERVICE' | 'COMPLETED' | 'CANCELLED';
+  requestStatus: string;
+  offeredPrice: number;
+};
+
 export type NurseDashboard = {
   professionalId: string;
   name: string;
@@ -42,7 +52,7 @@ export type NurseDashboard = {
   };
   newServiceRequests: DashboardRequest[];
   activeServices: DashboardRequest[];
-  todayActivity: DashboardRequest[];
+  recentActivities: NurseActivity[];
 };
 
 export const getNurseDashboard = async () =>

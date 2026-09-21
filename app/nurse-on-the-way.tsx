@@ -102,19 +102,33 @@ export default function NurseOnTheWayScreen() {
   );
 
   useEffect(() => {
-    if (!requestId) return;
+    if (!requestId || !request?.professionalId || !isTrackingStatus(request.status)) {
+      return;
+    }
     let active = true;
+    let cancelled = false;
 
-    void getAssignedNursePictureSource(requestId, Date.now())
-      .then((source) => {
-        if (active) setPictureSource(source);
-      })
-      .catch((error) => console.warn("Unable to load nurse picture", error));
+    const loadPictureWithRetry = async () => {
+      for (let attempt = 0; attempt < 3 && !cancelled; attempt += 1) {
+        const source = await getAssignedNursePictureSource(requestId, Date.now());
+        if (source) {
+          if (active) setPictureSource(source);
+          return;
+        }
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 900));
+        }
+      }
+    };
+
+    setPictureSource(null);
+    void loadPictureWithRetry();
 
     return () => {
       active = false;
+      cancelled = true;
     };
-  }, [requestId]);
+  }, [requestId, request?.professionalId, request?.status]);
 
   useEffect(() => {
     if (!requestId) return;
@@ -401,6 +415,16 @@ export default function NurseOnTheWayScreen() {
                   <Text style={styles.expandedValue}>{statusText(status)}</Text>
                 </View>
               </View>
+              {status === "IN_SERVICE" && request?.completionPasscode ? (
+                <View style={styles.passcodeCard}>
+                  <Ionicons name="keypad-outline" size={22} color="#2563EB" />
+                  <View style={styles.expandedTextWrap}>
+                    <Text style={styles.expandedLabel}>Service completion passcode</Text>
+                    <Text style={styles.passcodeValue}>{request.completionPasscode}</Text>
+                    <Text style={styles.passcodeHint}>Share this code with the professional when the service is complete.</Text>
+                  </View>
+                </View>
+              ) : null}
             </View>
           )}
         </Animated.View>
@@ -503,6 +527,9 @@ const styles = StyleSheet.create({
   expandedTextWrap: { flex: 1, marginLeft: 10 },
   expandedLabel: { fontSize: 10, color: "#94A3B8" },
   expandedValue: { marginTop: 3, fontSize: 12, fontWeight: "700", color: "#334155", lineHeight: 17 },
+  passcodeCard: { flexDirection: "row", alignItems: "flex-start", backgroundColor: "#EFF6FF", borderWidth: 1, borderColor: "#BFDBFE", borderRadius: 13, padding: 12 },
+  passcodeValue: { marginTop: 4, fontSize: 24, letterSpacing: 5, fontWeight: "900", color: "#1D4ED8" },
+  passcodeHint: { marginTop: 4, fontSize: 10, lineHeight: 15, color: "#475569" },
   loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   loadingText: { marginTop: 10, color: "#64748B", fontSize: 13 },
 });

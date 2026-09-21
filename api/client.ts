@@ -43,7 +43,12 @@ export const normalizeApiError = (error: any): ApiError => {
 
     return {
       code: String(backendError.code ?? 'UNKNOWN_ERROR'),
-      message: messageForStatus(error?.response?.status, String(backendError.message ?? 'Something went wrong.')),
+      // Preserve the backend's specific message. The old implementation
+      // replaced every 409 with the registration duplicate-account message,
+      // which hid payment/availability errors returned by request APIs.
+      message: typeof backendError.message === 'string' && backendError.message.trim()
+        ? backendError.message
+        : messageForStatus(error?.response?.status),
       timestamp: typeof backendError.timestamp === 'string' ? backendError.timestamp : undefined,
     };
   }

@@ -282,6 +282,13 @@ export default function OrdersScreen() {
               <Text style={styles.price}>₹{request.offeredPrice.toFixed(0)}</Text>
             </View>
 
+            <View style={styles.paymentRow}>
+              <Ionicons name={request.paymentMethod === "COD" ? "cash-outline" : "phone-portrait-outline"} size={16} color={request.paymentMethod === "COD" ? "#16A34A" : "#2563EB"} />
+              <Text style={[styles.paymentText, { color: request.paymentMethod === "COD" ? "#166534" : "#1D4ED8" }]}>
+                Payment: {request.paymentMethod === "COD" ? "Cash on Delivery" : "UPI"}
+              </Text>
+            </View>
+
             {request.status === "ACCEPTED" && request.professionalName && (
               <View style={styles.assignedRow}>
                 <Ionicons name="person-circle-outline" size={18} color="#15803D" />
@@ -445,6 +452,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#1E293B",
   },
+
+  paymentRow: { flexDirection: "row", alignItems: "center", marginTop: 9, gap: 6 },
+  paymentText: { fontSize: 10, fontWeight: "700" },
 
   assignedRow: {
     flexDirection: "row",

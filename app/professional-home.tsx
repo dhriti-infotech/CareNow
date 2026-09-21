@@ -14,9 +14,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppUser, getSession } from "../services/auth";
 import { getProfilePictureSource } from "../api/profilePicture";
+import { AppUser, getSession } from "../services/auth";
 
+import { getNurseDashboard, type NurseDashboard } from "../api/professionalDashboard";
 import {
   getNurseProfile,
   getNurseRequests,
@@ -26,13 +27,12 @@ import {
   type NurseProfile
 } from "../api/professionalRequests";
 import { useAuth } from "../context/auth-context";
-import { getNurseDashboard, type NurseDashboard } from "../api/professionalDashboard";
 import { registerProfessionalPushNotifications } from "../services/professional-notifications";
-import type { ProfessionalType } from "../services/professional-stats";
 import {
   ServiceRequest,
   type PrescriptionOrder,
 } from "../services/professional-requests";
+import type { ProfessionalType } from "../services/professional-stats";
 
 export default function ProfessionalHomeScreen() {
   const { user: authUser } = useAuth();
@@ -250,14 +250,21 @@ export default function ProfessionalHomeScreen() {
     };
   }, [authUser?.role, status, nurseProfile?.availabilityStatus]);
 
+  // const activityRequests = useMemo(() => {
+  //   return (dashboard?.recentActivities ?? []).slice(0, 4);
+  // }, [dashboard]);
+
   const activityRequests = useMemo(() => {
-    // The backend supplies a date-filtered activity list. Do not reconstruct
-    // Today's Activity from active/new requests because completed services
-    // would disappear and yesterday's still-active requests could leak in.
-    return (dashboard?.todayActivity ?? [])
-      .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime())
-      .slice(0, 3);
-  }, [dashboard]);
+  const activities = dashboard?.recentActivities ?? [];
+
+  // Show all activities when there are 3 or fewer.
+  // When there are more than 3, show only the latest 3.
+  if (activities.length <= 3) {
+    return activities;
+  }
+
+  return activities.slice(0, 3);
+}, [dashboard]);
 
   /*
    * Loading screen
@@ -456,7 +463,7 @@ export default function ProfessionalHomeScreen() {
               style={styles.activityCard}
               activeOpacity={0.85}
               onPress={() => {
-                if (request.status === "ACCEPTED" || request.status === "EN_ROUTE" || request.status === "ARRIVED" || request.status === "IN_SERVICE") {
+                if (request.requestStatus === "ACCEPTED" || request.requestStatus === "EN_ROUTE" || request.requestStatus === "ARRIVED" || request.requestStatus === "IN_SERVICE") {
                   router.push({ pathname: "/nurse-service-map", params: { requestId: request.requestId } });
                 } else {
                   router.push({ pathname: "/professional-requests", params: { requestId: request.requestId } });
@@ -473,11 +480,11 @@ export default function ProfessionalHomeScreen() {
               <View style={styles.activityInfo}>
                 <Text style={styles.activityService} numberOfLines={1}>{request.serviceType}</Text>
                 <Text style={styles.activityPatient} numberOfLines={1}>{request.patientName}</Text>
-                <Text style={styles.activityTime}>{request.requestedAt}</Text>
+                <Text style={styles.activityTime}>{formatRequestTime(request.activityAt)}</Text>
               </View>
-              <View style={[styles.activityStatus, request.priority === "URGENT" ? styles.activityStatusUrgent : styles.activityStatusUpcoming]}>
-                <Text style={[styles.activityStatusText, request.priority === "URGENT" ? styles.activityStatusUrgentText : styles.activityStatusUpcomingText]}>
-                  {request.priority === "URGENT" ? "Urgent" : activityStatusLabel(request.status)}
+              <View style={[styles.activityStatus, request.activityStatus === "DECLINED" ? styles.activityStatusDeclined : request.activityStatus === "EXPIRED" ? styles.activityStatusExpired : styles.activityStatusUpcoming]}>
+                <Text style={[styles.activityStatusText, request.activityStatus === "DECLINED" ? styles.activityStatusDeclinedText : request.activityStatus === "EXPIRED" ? styles.activityStatusExpiredText : styles.activityStatusUpcomingText]}>
+                  {activityStatusLabel(request.activityStatus)}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={19} color="#2D7481" />
@@ -725,7 +732,7 @@ function mapNurseRequest(request: {
   };
 }
 
-function activityStatusLabel(status: NurseDashboard["activeServices"][number]["status"]) {
+function activityStatusLabel(status: string) {
   switch (status) {
     case "ACCEPTED": return "Accepted";
     case "EN_ROUTE": return "On the way";
@@ -733,6 +740,9 @@ function activityStatusLabel(status: NurseDashboard["activeServices"][number]["s
     case "IN_SERVICE": return "In service";
     case "COMPLETED": return "Completed";
     case "OFFERED": return "New";
+    case "DECLINED": return "Declined";
+    case "EXPIRED": return "Expired";
+    case "CANCELLED": return "Cancelled";
     default: return "Upcoming";
   }
 }
@@ -1152,6 +1162,10 @@ const styles = StyleSheet.create({
   activityStatusText: { fontSize: 9, fontWeight: "800" },
   activityStatusUpcomingText: { color: "#2879E8" },
   activityStatusUrgentText: { color: "#D97816" },
+  activityStatusDeclined: { backgroundColor: "#FEF2F2" },
+  activityStatusDeclinedText: { color: "#DC2626" },
+  activityStatusExpired: { backgroundColor: "#F1F5F9" },
+  activityStatusExpiredText: { color: "#64748B" },
 
   careBanner: { height: 126, borderRadius: 15, overflow: "hidden", marginTop: 16, position: "relative", backgroundColor: "#DDF6F5" },
   careBannerImage: { width: "100%", height: "100%" },

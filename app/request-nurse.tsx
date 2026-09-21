@@ -15,8 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { createNurseRequest } from "../api/patientRequests";
-import { getNurseServicePricing, type NurseServicePrice } from "../api/servicePricing";
+import { createNurseRequest, type PaymentMethod } from "../api/patientRequests";
 import { useAuth } from "../context/auth-context";
 
 const careOptions = [
@@ -39,51 +38,18 @@ export default function RequestNurseScreen() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [detectedAddress, setDetectedAddress] = useState("");
   const [notes, setNotes] = useState("");
-  const [servicePricing, setServicePricing] = useState<NurseServicePrice[]>([]);
-  const [pricingLoading, setPricingLoading] = useState(true);
-  const [pricingError, setPricingError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (requestFor === "self") setPatientName(user?.name ?? "");
   }, [requestFor, user?.name]);
 
-  useEffect(() => {
-    let mounted = true;
-    const loadPricing = async () => {
-      try {
-        setPricingLoading(true);
-        setPricingError(null);
-        const pricing = await getNurseServicePricing();
-        if (mounted) setServicePricing(pricing);
-      } catch (error: any) {
-        if (mounted) {
-          setPricingError(error?.message ?? "Unable to load service pricing.");
-          setServicePricing([]);
-        }
-      } finally {
-        if (mounted) setPricingLoading(false);
-      }
-    };
-    void loadPricing();
-    return () => { mounted = false; };
-  }, []);
 
   const selectedCareOption = useMemo(
     () => careOptions.find((option) => option.id === selectedCare) ?? careOptions[0],
     [selectedCare]
   );
-
-  const selectedServicePrice = useMemo(() => {
-    const match = servicePricing.find(
-      (item) => item.serviceType.trim().toLowerCase() === selectedCareOption.title.trim().toLowerCase()
-    );
-    return match?.price ?? null;
-  }, [servicePricing, selectedCareOption]);
-
-  const formattedPrice = selectedServicePrice == null
-    ? null
-    : `₹${selectedServicePrice.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
   const detectCurrentLocation = async () => {
     try {
@@ -117,14 +83,6 @@ export default function RequestNurseScreen() {
   };
 
   const handleRequest = async () => {
-    if (pricingLoading) {
-      Alert.alert("Please wait", "We are loading the current service price.");
-      return;
-    }
-    if (selectedServicePrice === null) {
-      Alert.alert("Price unavailable", pricingError ?? "The price for this service is currently unavailable. Please try again.");
-      return;
-    }
     if (!patientName.trim()) {
       Alert.alert("Patient name required", "Please enter the patient's name.");
       return;
@@ -147,13 +105,14 @@ export default function RequestNurseScreen() {
         locationAddress: detectedAddress.trim(),
         latitude,
         longitude,
-        offeredPrice: selectedServicePrice,
+        offeredPrice: 0,
+        paymentMethod,
         priority: urgency === "asap" ? "URGENT" : "NORMAL",
         notes: notes.trim() || undefined,
       });
 
       router.replace({
-        pathname: "/nurse-request-submitted",
+        pathname: "/available-professionals",
         params: { requestId: request.requestId, patientName: request.patientName, careType: selectedCare, urgency },
       });
     } catch (error: any) {
@@ -205,10 +164,8 @@ export default function RequestNurseScreen() {
               <Ionicons name="pricetag-outline" size={21} color="#16A34A" />
             </View>
             <View style={styles.priceContent}>
-              <Text style={styles.priceLabel}>Service price</Text>
-              <Text style={styles.priceValue}>
-                {pricingLoading ? "Loading..." : formattedPrice ?? "Currently unavailable"}
-              </Text>
+              <Text style={styles.priceLabel}>Distance-based pricing</Text>
+              <Text style={styles.priceValue}>₹199 – ₹299</Text>
             </View>
             <Text style={styles.priceUnit}>INR</Text>
           </View>
@@ -297,6 +254,38 @@ export default function RequestNurseScreen() {
             </View>
           ) : null}
 
+          <Text style={styles.sectionTitle}>Payment method</Text>
+          <View style={styles.paymentRow}>
+            <TouchableOpacity
+              style={[styles.paymentCard, paymentMethod === "UPI" && styles.paymentCardSelected]}
+              activeOpacity={0.8}
+              onPress={() => setPaymentMethod("UPI")}
+            >
+              <View style={[styles.radio, paymentMethod === "UPI" && styles.radioSelected]}>
+                {paymentMethod === "UPI" && <View style={styles.radioDot} />}
+              </View>
+              <Ionicons name="phone-portrait-outline" size={21} color="#2563EB" />
+              <View style={styles.paymentText}>
+                <Text style={styles.paymentTitle}>UPI</Text>
+                <Text style={styles.paymentSubtitle}>Pay in the app</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.paymentCard, paymentMethod === "COD" && styles.paymentCardSelected]}
+              activeOpacity={0.8}
+              onPress={() => setPaymentMethod("COD")}
+            >
+              <View style={[styles.radio, paymentMethod === "COD" && styles.radioSelected]}>
+                {paymentMethod === "COD" && <View style={styles.radioDot} />}
+              </View>
+              <Ionicons name="cash-outline" size={21} color="#16A34A" />
+              <View style={styles.paymentText}>
+                <Text style={styles.paymentTitle}>COD</Text>
+                <Text style={styles.paymentSubtitle}>Cash at service</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.sectionTitle}>Additional information</Text>
           <TextInput
             value={notes}
@@ -310,11 +299,11 @@ export default function RequestNurseScreen() {
 
           <View style={styles.infoCard}>
             <Ionicons name="information-circle-outline" size={21} color="#2563EB" />
-            <Text style={styles.infoText}>The price shown above is the current CareNow service price. Availability depends on nearby healthcare-worker availability.</Text>
+            <Text style={styles.infoText}>You will see available professionals and their distance-based price after submitting the request. You cannot choose a professional; CareNow will match one automatically.</Text>
           </View>
 
           <TouchableOpacity style={[styles.requestButton, submitting && styles.requestButtonDisabled]} activeOpacity={0.85} onPress={handleRequest} disabled={submitting}>
-            <Text style={styles.requestButtonText}>{submitting ? "Requesting..." : formattedPrice ? `Request Nurse • ${formattedPrice}` : "Request Nurse"}</Text>
+            <Text style={styles.requestButtonText}>{submitting ? "Requesting..." : "Request Nurse"}</Text>
             <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
           </TouchableOpacity>
 
@@ -330,30 +319,23 @@ export default function RequestNurseScreen() {
                   <Ionicons name="close" size={24} color="#475569" />
                 </TouchableOpacity>
               </View>
-              {careOptions.map((option) => {
-                const price = servicePricing.find((item) => item.serviceType.trim().toLowerCase() === option.title.trim().toLowerCase())?.price;
-                const optionPrice = price == null ? null : `₹${price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
-                return (
-                  <TouchableOpacity
-                    key={option.id}
-                    style={[styles.dropdownOption, selectedCare === option.id && styles.dropdownOptionSelected]}
-                    onPress={() => { setSelectedCare(option.id); setServiceDropdownOpen(false); }}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.optionIcon}>
-                      <Ionicons name={option.icon} size={22} color="#2563EB" />
-                    </View>
-                    <View style={styles.optionContent}>
-                      <Text style={styles.optionTitle}>{option.title}</Text>
-                      <Text style={styles.optionDescription}>{option.description}</Text>
-                    </View>
-                    <View style={styles.optionPriceContainer}>
-                      <Text style={styles.optionPrice}>{pricingLoading ? "..." : optionPrice ?? "N/A"}</Text>
-                      {selectedCare === option.id && <Ionicons name="checkmark-circle" size={21} color="#2563EB" />}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+              {careOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.id}
+                  style={[styles.dropdownOption, selectedCare === option.id && styles.dropdownOptionSelected]}
+                  onPress={() => { setSelectedCare(option.id); setServiceDropdownOpen(false); }}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.optionIcon}>
+                    <Ionicons name={option.icon} size={22} color="#2563EB" />
+                  </View>
+                  <View style={styles.optionContent}>
+                    <Text style={styles.optionTitle}>{option.title}</Text>
+                    <Text style={styles.optionDescription}>{option.description}</Text>
+                  </View>
+                  {selectedCare === option.id && <Ionicons name="checkmark-circle" size={21} color="#2563EB" />}
+                </TouchableOpacity>
+              ))}
             </Pressable>
           </Pressable>
         </Modal>
@@ -388,6 +370,12 @@ const styles = StyleSheet.create({
   priceValue: { fontSize: 19, fontWeight: "800", color: "#166534", marginTop: 2 },
   priceUnit: { fontSize: 10, fontWeight: "700", color: "#16A34A" },
   forRow: { flexDirection: "row", gap: 9 },
+  paymentRow: { flexDirection: "row", gap: 9 },
+  paymentCard: { flex: 1, minHeight: 74, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 13, padding: 10, flexDirection: "row", alignItems: "center" },
+  paymentCardSelected: { borderColor: "#2563EB", backgroundColor: "#F8FBFF" },
+  paymentText: { flex: 1, marginLeft: 7 },
+  paymentTitle: { fontSize: 12, fontWeight: "800", color: "#1E293B" },
+  paymentSubtitle: { fontSize: 9, color: "#64748B", marginTop: 3 },
   forCard: { flex: 1, minHeight: 72, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 13, padding: 11, flexDirection: "row", alignItems: "center" },
   forCardSelected: { borderColor: "#2563EB", backgroundColor: "#F8FBFF" },
   forTextContainer: { flex: 1, marginLeft: 9 },
