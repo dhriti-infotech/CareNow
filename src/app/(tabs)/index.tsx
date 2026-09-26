@@ -1,7 +1,10 @@
+import { useAuth } from "@/context/auth-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as Location from "expo-location";
 import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+
 import {
   ActivityIndicator,
   Alert,
@@ -12,10 +15,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useCallback, useEffect, useState } from "react";
 
 import { getProfilePictureSource } from "@/api/profilePicture";
-import { useAuth } from "@/context/auth-context";
 
 const quickServices = [
   {
@@ -34,7 +35,7 @@ const quickServices = [
     title: "Prescription Medicines",
     subtitle: "Delivered to you",
     icon: "medical-outline" as const,
-    route: "/services"
+    route: "/services",
   },
   {
     title: "Medical Equipment",
@@ -44,11 +45,10 @@ const quickServices = [
   },
 ];
 
-
-
 export default function HomeScreen() {
   const { user } = useAuth();
-  const [profilePicture, setProfilePicture] = useState<Awaited<ReturnType<typeof getProfilePictureSource>>>(null);
+  const [profilePicture, setProfilePicture] =
+    useState<Awaited<ReturnType<typeof getProfilePictureSource>>>(null);
   const [profilePictureLoading, setProfilePictureLoading] = useState(true);
   const [locationText, setLocationText] = useState("Select your location");
   const [locationLoading, setLocationLoading] = useState(false);
@@ -73,7 +73,7 @@ export default function HomeScreen() {
       if (status !== "granted") {
         Alert.alert(
           "Location permission required",
-          "Please allow CareNow to use your location so we can show your current location."
+          "Please allow CareNow to use your location so we can show your current location.",
         );
         return;
       }
@@ -89,18 +89,23 @@ export default function HomeScreen() {
       });
 
       const { latitude, longitude } = currentLocation.coords;
-      const addresses = await Location.reverseGeocodeAsync({ latitude, longitude });
+      const addresses = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
 
       if (addresses.length > 0) {
         const place = addresses[0];
         // Prefer the most local locality first (for example,
         // "Uppal, Hyderabad") while keeping the header compact.
-        const primary = place.district || place.city || place.subregion || place.region;
-        const secondary = place.city && place.city !== primary
-          ? place.city
-          : place.region && place.region !== primary
-            ? place.region
-            : undefined;
+        const primary =
+          place.district || place.city || place.subregion || place.region;
+        const secondary =
+          place.city && place.city !== primary
+            ? place.city
+            : place.region && place.region !== primary
+              ? place.region
+              : undefined;
 
         const formatted = [primary, secondary].filter(Boolean).join(", ");
         setLocationText(formatted || place.name || "Current location");
@@ -111,7 +116,7 @@ export default function HomeScreen() {
       console.error("Home location detection failed:", error);
       Alert.alert(
         "Location unavailable",
-        "We couldn't detect your current location. Please check that Location Services are enabled and try again."
+        "We couldn't detect your current location. Please check that Location Services are enabled and try again.",
       );
     } finally {
       setLocationLoading(false);
@@ -122,12 +127,30 @@ export default function HomeScreen() {
     useCallback(() => {
       void loadProfilePicture();
       return undefined;
-    }, [loadProfilePicture])
+    }, [loadProfilePicture]),
   );
 
   useEffect(() => {
     void detectCurrentLocation();
   }, [detectCurrentLocation]);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+
+    if (hour < 12) {
+      return "Good Morning";
+    }
+
+    if (hour < 17) {
+      return "Good Afternoon";
+    }
+
+    if (hour < 21) {
+      return "Good Evening";
+    }
+
+    return "Good Night";
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -160,13 +183,11 @@ export default function HomeScreen() {
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    {locationLoading ? "Detecting current location..." : locationText}
+                    {locationLoading
+                      ? "Detecting current location..."
+                      : locationText}
                   </Text>
-                  <Ionicons
-                    name="chevron-down"
-                    size={14}
-                    color="#526973"
-                  />
+                  <Ionicons name="chevron-down" size={14} color="#526973" />
                 </View>
               </View>
             </TouchableOpacity>
@@ -193,7 +214,9 @@ export default function HomeScreen() {
 
           {/* Greeting */}
           <View style={styles.greeting}>
-            <Text style={styles.greetingTitle}>Good Morning 👋</Text>
+            <Text style={styles.greetingTitle}>
+              {getGreeting()} {user?.name}
+            </Text>{" "}
             <Text style={styles.greetingSubtitle}>
               How can we help you today?
             </Text>
@@ -203,9 +226,7 @@ export default function HomeScreen() {
           <TouchableOpacity style={styles.searchBox}>
             <Ionicons name="search-outline" size={21} color="#687F89" />
 
-            <Text style={styles.searchText}>
-              Search for a service
-            </Text>
+            <Text style={styles.searchText}>Search for a service</Text>
           </TouchableOpacity>
 
           {/* Quick Services */}
@@ -222,20 +243,12 @@ export default function HomeScreen() {
                 onPress={() => router.push(service.route as any)}
               >
                 <View style={styles.serviceIcon}>
-                  <Ionicons
-                    name={service.icon}
-                    size={27}
-                    color="#0A9FB5"
-                  />
+                  <Ionicons name={service.icon} size={27} color="#0A9FB5" />
                 </View>
 
-                <Text style={styles.serviceTitle}>
-                  {service.title}
-                </Text>
+                <Text style={styles.serviceTitle}>{service.title}</Text>
 
-                <Text style={styles.serviceSubtitle}>
-                  {service.subtitle}
-                </Text>
+                <Text style={styles.serviceSubtitle}>{service.subtitle}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -251,9 +264,7 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.urgentContent}>
-              <Text style={styles.urgentTitle}>
-                Need healthcare quickly?
-              </Text>
+              <Text style={styles.urgentTitle}>Need healthcare quickly?</Text>
 
               <Text style={styles.urgentSubtitle}>
                 Request a nearby healthcare worker
@@ -261,11 +272,7 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.urgentArrow}>
-              <Ionicons
-                name="arrow-forward"
-                size={19}
-                color="#FFFFFF"
-              />
+              <Ionicons name="arrow-forward" size={19} color="#FFFFFF" />
             </View>
           </TouchableOpacity>
 
@@ -278,9 +285,7 @@ export default function HomeScreen() {
             />
 
             <View style={styles.trustTextContainer}>
-              <Text style={styles.trustTitle}>
-                Healthcare at your doorstep
-              </Text>
+              <Text style={styles.trustTitle}>Healthcare at your doorstep</Text>
 
               <Text style={styles.trustSubtitle}>
                 Connecting you with local healthcare services.
@@ -420,7 +425,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#10242C",
   },
-
 
   serviceGrid: {
     flexDirection: "row",

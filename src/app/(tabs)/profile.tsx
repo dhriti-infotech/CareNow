@@ -24,7 +24,7 @@ export default function ProfileScreen() {
       <View style={styles.content}>
         <ProfilePicturePicker owner="USER" user={user} size={104} />
 
-        <Text style={styles.title}>{user?.email || "Your Profile"}</Text>
+        <Text style={styles.title}>{user?.name || "Your Profile"}</Text>
 
         {user?.email && <Text style={styles.mobile}>{user.email}</Text>}
 
@@ -32,7 +32,9 @@ export default function ProfileScreen() {
           <Text style={styles.roleText}>{user?.role || "USER"}</Text>
         </View>
 
-        <Text style={styles.subtitle}>Manage your profile, saved addresses and preferences here.</Text>
+        <Text style={styles.subtitle}>
+          Manage your profile, saved addresses and preferences here.
+        </Text>
 
         <View style={styles.accountCard}>
           <View style={styles.accountRow}>
@@ -42,7 +44,9 @@ export default function ProfileScreen() {
 
             <View style={styles.rowContent}>
               <Text style={styles.rowTitle}>Personal Information</Text>
-              <Text style={styles.rowSubtitle}>Manage your personal details</Text>
+              <Text style={styles.rowSubtitle}>
+                Manage your personal details
+              </Text>
             </View>
 
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
@@ -57,14 +61,20 @@ export default function ProfileScreen() {
 
             <View style={styles.rowContent}>
               <Text style={styles.rowTitle}>Saved Addresses</Text>
-              <Text style={styles.rowSubtitle}>Manage your service locations</Text>
+              <Text style={styles.rowSubtitle}>
+                Manage your service locations
+              </Text>
             </View>
 
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </View>
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} activeOpacity={0.85} onPress={handleLogout}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          activeOpacity={0.85}
+          onPress={handleLogout}
+        >
           <Ionicons name="log-out-outline" size={21} color="#DC2626" />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
