@@ -1,13 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import ProfilePicturePicker from "@/components/ProfilePicturePicker";
 import { useAuth } from "@/context/auth-context";
-
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
-
+  const router = useRouter();
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
@@ -42,12 +42,21 @@ export default function ProfileScreen() {
               <Ionicons name="person-outline" size={20} color="#2563EB" />
             </View>
 
-            <View style={styles.rowContent}>
-              <Text style={styles.rowTitle}>Personal Information</Text>
-              <Text style={styles.rowSubtitle}>
-                Manage your personal details
-              </Text>
-            </View>
+            <TouchableOpacity
+              style={styles.accountRow}
+              activeOpacity={0.7}
+              onPress={() => router.push("/personal-information")}
+            >
+              <View style={styles.rowContent}>
+                <Text style={styles.rowTitle}>Personal Information</Text>
+
+                <Text style={styles.rowSubtitle}>
+                  Manage your personal details
+                </Text>
+              </View>
+
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            </TouchableOpacity>
 
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </View>
