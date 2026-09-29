@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -118,164 +118,183 @@ export default function SavedAddressesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            activeOpacity={0.7}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={21} color="#0F172A" />
-          </TouchableOpacity>
+    <>
+      <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
+      />
+      <SafeAreaView style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              activeOpacity={0.7}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={21} color="#0F172A" />
+            </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>Saved Addresses</Text>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.title}>Saved Addresses</Text>
 
-            <Text style={styles.subtitle}>
-              Manage service locations for you, your dependents and friends.
-            </Text>
+              <Text style={styles.subtitle}>
+                Manage service locations for you, your dependents and friends.
+              </Text>
+            </View>
           </View>
-        </View>
 
-        {/* Address List */}
-        <View style={styles.addressList}>
-          {savedAddresses.map((address) => (
-            <View key={address.id} style={styles.addressCard}>
-              {/* Card Header */}
-              <View style={styles.cardHeader}>
-                <View style={styles.ownerSection}>
-                  <View style={styles.rowIcon}>
-                    <Ionicons
-                      name={getOwnerIcon(address.ownerType)}
-                      size={20}
-                      color="#2563EB"
-                    />
-                  </View>
-
-                  <View style={styles.ownerContent}>
-                    <View style={styles.nameRow}>
-                      <Text style={styles.ownerName}>{address.ownerName}</Text>
-
-                      {address.isDefault && (
-                        <View style={styles.defaultBadge}>
-                          <Text style={styles.defaultText}>DEFAULT</Text>
-                        </View>
-                      )}
+          {/* Address List */}
+          <View style={styles.addressList}>
+            {savedAddresses.map((address) => (
+              <View key={address.id} style={styles.addressCard}>
+                {/* Card Header */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.ownerSection}>
+                    <View style={styles.rowIcon}>
+                      <Ionicons
+                        name={getOwnerIcon(address.ownerType)}
+                        size={20}
+                        color="#2563EB"
+                      />
                     </View>
 
-                    {address.relationship && (
-                      <Text style={styles.relationship}>
-                        {address.relationship}
-                      </Text>
-                    )}
+                    <View style={styles.ownerContent}>
+                      <View style={styles.nameRow}>
+                        <Text style={styles.ownerName}>
+                          {address.ownerName}
+                        </Text>
+
+                        {address.isDefault && (
+                          <View style={styles.defaultBadge}>
+                            <Text style={styles.defaultText}>DEFAULT</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {address.relationship && (
+                        <Text style={styles.relationship}>
+                          {address.relationship}
+                        </Text>
+                      )}
+                    </View>
                   </View>
+
+                  <TouchableOpacity
+                    style={styles.menuButton}
+                    activeOpacity={0.7}
+                    onPress={() => handleAddressMenu(address)}
+                  >
+                    <Ionicons
+                      name="ellipsis-vertical"
+                      size={20}
+                      color="#64748B"
+                    />
+                  </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity
-                  style={styles.menuButton}
-                  activeOpacity={0.7}
-                  onPress={() => handleAddressMenu(address)}
-                >
-                  <Ionicons
-                    name="ellipsis-vertical"
-                    size={20}
-                    color="#64748B"
-                  />
-                </TouchableOpacity>
-              </View>
+                {/* Address */}
+                <View style={styles.addressSection}>
+                  <View style={styles.addressLabelRow}>
+                    <Ionicons
+                      name="location-outline"
+                      size={16}
+                      color="#64748B"
+                    />
 
-              {/* Address */}
-              <View style={styles.addressSection}>
-                <View style={styles.addressLabelRow}>
-                  <Ionicons name="location-outline" size={16} color="#64748B" />
+                    <Text style={styles.addressLabel}>{address.label}</Text>
+                  </View>
 
-                  <Text style={styles.addressLabel}>{address.label}</Text>
+                  <Text style={styles.addressText}>
+                    {address.addressLine1}
+                    {address.addressLine2 ? `, ${address.addressLine2}` : ""}
+                  </Text>
+
+                  <Text style={styles.addressText}>
+                    {address.city}, {address.state} - {address.pincode}
+                  </Text>
                 </View>
 
-                <Text style={styles.addressText}>
-                  {address.addressLine1}
-                  {address.addressLine2 ? `, ${address.addressLine2}` : ""}
-                </Text>
+                {/* Card Footer */}
+                <View style={styles.cardFooter}>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      router.push(`/saved-addresses/edit/${address.id}`)
+                    }
+                  >
+                    <Ionicons name="create-outline" size={16} color="#2563EB" />
 
-                <Text style={styles.addressText}>
-                  {address.city}, {address.state} - {address.pincode}
-                </Text>
+                    <Text style={styles.editText}>Edit</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.serviceButton}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      Alert.alert(
+                        "Select Address",
+                        `${address.ownerName}'s address selected.`,
+                      );
+                    }}
+                  >
+                    <Text style={styles.serviceButtonText}>
+                      Use this address
+                    </Text>
+
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color="#2563EB"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
-
-              {/* Card Footer */}
-              <View style={styles.cardFooter}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  activeOpacity={0.7}
-                  onPress={() =>
-                    router.push(`/saved-addresses/edit/${address.id}`)
-                  }
-                >
-                  <Ionicons name="create-outline" size={16} color="#2563EB" />
-
-                  <Text style={styles.editText}>Edit</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.serviceButton}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Alert.alert(
-                      "Select Address",
-                      `${address.ownerName}'s address selected.`,
-                    );
-                  }}
-                >
-                  <Text style={styles.serviceButtonText}>Use this address</Text>
-
-                  <Ionicons name="chevron-forward" size={16} color="#2563EB" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {/* Add Address */}
-        <TouchableOpacity
-          style={styles.addButton}
-          activeOpacity={0.85}
-          onPress={() => router.push("/add")}
-        >
-          <View style={styles.addIcon}>
-            <Ionicons name="add" size={22} color="#2563EB" />
+            ))}
           </View>
 
-          <View style={styles.addContent}>
-            <Text style={styles.addTitle}>Add New Address</Text>
+          {/* Add Address */}
+          <TouchableOpacity
+            style={styles.addButton}
+            activeOpacity={0.85}
+            onPress={() => router.push("/add")}
+          >
+            <View style={styles.addIcon}>
+              <Ionicons name="add" size={22} color="#2563EB" />
+            </View>
 
-            <Text style={styles.addSubtitle}>
-              Add an address for yourself, a dependent or a friend
+            <View style={styles.addContent}>
+              <Text style={styles.addTitle}>Add New Address</Text>
+
+              <Text style={styles.addSubtitle}>
+                Add an address for yourself, a dependent or a friend
+              </Text>
+            </View>
+
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </TouchableOpacity>
+
+          {/* Bottom Information */}
+          <View style={styles.infoBox}>
+            <Ionicons
+              name="information-circle-outline"
+              size={18}
+              color="#2563EB"
+            />
+
+            <Text style={styles.infoText}>
+              You can save multiple service locations and choose the appropriate
+              address whenever you book a service.
             </Text>
           </View>
-
-          <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-        </TouchableOpacity>
-
-        {/* Bottom Information */}
-        <View style={styles.infoBox}>
-          <Ionicons
-            name="information-circle-outline"
-            size={18}
-            color="#2563EB"
-          />
-
-          <Text style={styles.infoText}>
-            You can save multiple service locations and choose the appropriate
-            address whenever you book a service.
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 }
 

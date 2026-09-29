@@ -47,8 +47,10 @@ const quickServices = [
 
 export default function HomeScreen() {
   const { user } = useAuth();
+
   const [profilePicture, setProfilePicture] =
     useState<Awaited<ReturnType<typeof getProfilePictureSource>>>(null);
+
   const [profilePictureLoading, setProfilePictureLoading] = useState(true);
   const [locationText, setLocationText] = useState("Select your location");
   const [locationLoading, setLocationLoading] = useState(false);
@@ -56,7 +58,9 @@ export default function HomeScreen() {
   const loadProfilePicture = useCallback(async () => {
     try {
       setProfilePictureLoading(true);
+
       const source = await getProfilePictureSource("USER", Date.now());
+
       setProfilePicture(source);
     } catch {
       setProfilePicture(null);
@@ -68,6 +72,7 @@ export default function HomeScreen() {
   const detectCurrentLocation = useCallback(async () => {
     try {
       setLocationLoading(true);
+
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== "granted") {
@@ -81,7 +86,7 @@ export default function HomeScreen() {
       try {
         await Location.enableNetworkProviderAsync();
       } catch {
-        // Continue with the available device location provider.
+        // Continue with available device location provider.
       }
 
       const currentLocation = await Location.getCurrentPositionAsync({
@@ -89,6 +94,7 @@ export default function HomeScreen() {
       });
 
       const { latitude, longitude } = currentLocation.coords;
+
       const addresses = await Location.reverseGeocodeAsync({
         latitude,
         longitude,
@@ -96,10 +102,10 @@ export default function HomeScreen() {
 
       if (addresses.length > 0) {
         const place = addresses[0];
-        // Prefer the most local locality first (for example,
-        // "Uppal, Hyderabad") while keeping the header compact.
+
         const primary =
           place.district || place.city || place.subregion || place.region;
+
         const secondary =
           place.city && place.city !== primary
             ? place.city
@@ -108,12 +114,14 @@ export default function HomeScreen() {
               : undefined;
 
         const formatted = [primary, secondary].filter(Boolean).join(", ");
+
         setLocationText(formatted || place.name || "Current location");
       } else {
         setLocationText("Current location");
       }
     } catch (error) {
       console.error("Home location detection failed:", error);
+
       Alert.alert(
         "Location unavailable",
         "We couldn't detect your current location. Please check that Location Services are enabled and try again.",
@@ -126,6 +134,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       void loadProfilePicture();
+
       return undefined;
     }, [loadProfilePicture]),
   );
@@ -138,18 +147,18 @@ export default function HomeScreen() {
     const hour = new Date().getHours();
 
     if (hour < 12) {
-      return "Good Morning";
+      return "Good morning";
     }
 
     if (hour < 17) {
-      return "Good Afternoon";
+      return "Good afternoon";
     }
 
     if (hour < 21) {
-      return "Good Evening";
+      return "Good evening";
     }
 
-    return "Good Night";
+    return "Good night";
   };
 
   return (
@@ -159,8 +168,8 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Header */}
-          <View style={styles.header}>
+          {/* Location + Profile */}
+          <View style={styles.topBar}>
             <TouchableOpacity
               style={styles.locationContainer}
               onPress={() => void detectCurrentLocation()}
@@ -171,23 +180,23 @@ export default function HomeScreen() {
                 {locationLoading ? (
                   <ActivityIndicator size="small" color="#0A9FB5" />
                 ) : (
-                  <Ionicons name="location" size={19} color="#0A9FB5" />
+                  <Ionicons name="location" size={18} color="#0A9FB5" />
                 )}
               </View>
 
               <View style={styles.locationTextContainer}>
-                <Text style={styles.locationLabel}>Your Location</Text>
+                <Text style={styles.locationLabel}>Your location</Text>
+
                 <View style={styles.locationRow}>
                   <Text
                     style={styles.locationText}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    {locationLoading
-                      ? "Detecting current location..."
-                      : locationText}
+                    {locationLoading ? "Detecting location..." : locationText}
                   </Text>
-                  <Ionicons name="chevron-down" size={14} color="#526973" />
+
+                  <Ionicons name="chevron-down" size={15} color="#526973" />
                 </View>
               </View>
             </TouchableOpacity>
@@ -215,21 +224,24 @@ export default function HomeScreen() {
           {/* Greeting */}
           <View style={styles.greeting}>
             <Text style={styles.greetingTitle}>
-              {getGreeting()} {user?.name}
-            </Text>{" "}
+              {getGreeting()}, {user?.name || "there"} 👋
+            </Text>
+
             <Text style={styles.greetingSubtitle}>
               How can we help you today?
             </Text>
           </View>
 
           {/* Search */}
-          <TouchableOpacity style={styles.searchBox}>
-            <Ionicons name="search-outline" size={21} color="#687F89" />
+          <TouchableOpacity style={styles.searchBox} activeOpacity={0.8}>
+            <View style={styles.searchIcon}>
+              <Ionicons name="search-outline" size={20} color="#687F89" />
+            </View>
 
             <Text style={styles.searchText}>Search for a service</Text>
           </TouchableOpacity>
 
-          {/* Quick Services */}
+          {/* Services */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>What do you need?</Text>
           </View>
@@ -239,59 +251,77 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={service.title}
                 style={styles.serviceCard}
-                activeOpacity={0.8}
+                activeOpacity={0.82}
                 onPress={() => router.push(service.route as any)}
               >
                 <View style={styles.serviceIcon}>
-                  <Ionicons name={service.icon} size={27} color="#0A9FB5" />
+                  <Ionicons name={service.icon} size={25} color="#0A9FB5" />
                 </View>
 
-                <Text style={styles.serviceTitle}>{service.title}</Text>
+                <View style={styles.serviceText}>
+                  <Text style={styles.serviceTitle} numberOfLines={2}>
+                    {service.title}
+                  </Text>
 
-                <Text style={styles.serviceSubtitle}>{service.subtitle}</Text>
+                  <Text style={styles.serviceSubtitle} numberOfLines={1}>
+                    {service.subtitle}
+                  </Text>
+                </View>
+
+                <View style={styles.serviceArrow}>
+                  <Ionicons name="chevron-forward" size={15} color="#9AAEB5" />
+                </View>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Emergency / Quick Request */}
+          {/* Quick Healthcare Request */}
           <TouchableOpacity
-            style={styles.urgentCard}
-            activeOpacity={0.85}
+            style={styles.quickRequestCard}
+            activeOpacity={0.88}
             onPress={() => router.push("/services")}
           >
-            <View style={styles.urgentIcon}>
+            <View style={styles.quickRequestIcon}>
               <Ionicons name="flash" size={23} color="#FFFFFF" />
             </View>
 
-            <View style={styles.urgentContent}>
-              <Text style={styles.urgentTitle}>Need healthcare quickly?</Text>
+            <View style={styles.quickRequestContent}>
+              <Text style={styles.quickRequestTitle}>
+                Need healthcare quickly?
+              </Text>
 
-              <Text style={styles.urgentSubtitle}>
-                Request a nearby healthcare worker
+              <Text style={styles.quickRequestSubtitle}>
+                Find a healthcare professional near you
               </Text>
             </View>
 
-            <View style={styles.urgentArrow}>
+            <View style={styles.quickRequestArrow}>
               <Ionicons name="arrow-forward" size={19} color="#FFFFFF" />
             </View>
           </TouchableOpacity>
 
-          {/* Trust message */}
-          <View style={styles.trustCard}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={25}
-              color="#16A34A"
-            />
+          {/* Trust / reassurance */}
+          <View style={styles.trustRow}>
+            <View style={styles.trustIcon}>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={20}
+                color="#16A34A"
+              />
+            </View>
 
-            <View style={styles.trustTextContainer}>
-              <Text style={styles.trustTitle}>Healthcare at your doorstep</Text>
+            <View style={styles.trustContent}>
+              <Text style={styles.trustTitle}>
+                Trusted healthcare at your doorstep
+              </Text>
 
               <Text style={styles.trustSubtitle}>
-                Connecting you with local healthcare services.
+                Local • Secure • Convenient
               </Text>
             </View>
           </View>
+
+          <View style={styles.bottomSpacing} />
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -311,60 +341,68 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 30,
+    paddingBottom: 28,
   },
 
-  header: {
+  /* --------------------------------
+     TOP BAR
+  -------------------------------- */
+
+  topBar: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 8,
-    paddingBottom: 12,
+    justifyContent: "space-between",
+    paddingTop: 7,
+    paddingBottom: 7,
   },
 
   locationContainer: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
+    marginRight: 14,
+  },
+
+  locationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#EAF9FC",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 10,
   },
 
   locationTextContainer: {
-    flexShrink: 1,
-  },
-
-  locationIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#EAF9FC",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 9,
+    flex: 1,
   },
 
   locationLabel: {
     fontSize: 11,
-    color: "#687F89",
-    marginBottom: 2,
+    lineHeight: 15,
+    color: "#71858D",
+    marginBottom: 1,
   },
 
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 1,
   },
 
   locationText: {
-    fontSize: 13,
-    fontWeight: "700",
+    flexShrink: 1,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: "800",
     color: "#182A33",
-    marginRight: 3,
+    marginRight: 4,
   },
 
   profileButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
@@ -378,160 +416,229 @@ const styles = StyleSheet.create({
     height: "100%",
   },
 
+  /* --------------------------------
+     GREETING
+  -------------------------------- */
+
   greeting: {
-    marginTop: 8,
-    marginBottom: 16,
+    marginTop: 18,
+    marginBottom: 17,
   },
 
   greetingTitle: {
     fontSize: 25,
+    lineHeight: 31,
     fontWeight: "800",
     color: "#10242C",
+    letterSpacing: -0.4,
   },
 
   greetingSubtitle: {
     fontSize: 14,
+    lineHeight: 20,
     color: "#687F89",
     marginTop: 4,
   },
 
+  /* --------------------------------
+     SEARCH
+  -------------------------------- */
+
   searchBox: {
-    height: 50,
-    borderRadius: 12,
+    height: 52,
+    borderRadius: 14,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#D7E8EB",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 15,
-    marginBottom: 24,
+    paddingHorizontal: 13,
+    marginBottom: 25,
+  },
+
+  searchIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   searchText: {
     fontSize: 14,
     color: "#91A6AE",
-    marginLeft: 10,
+    marginLeft: 5,
   },
 
+  /* --------------------------------
+     SERVICES
+  -------------------------------- */
+
   sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 12,
   },
 
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 19,
+    lineHeight: 25,
     fontWeight: "800",
     color: "#10242C",
+    letterSpacing: -0.2,
   },
 
   serviceGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 8,
   },
 
   serviceCard: {
-    width: "48.2%",
+    width: "48.4%",
+    minHeight: 132,
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 15,
+    padding: 13,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#D7E8EB",
+    borderColor: "#D9E8EB",
+    position: "relative",
   },
 
   serviceIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#EAF9FC",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 11,
+    marginBottom: 10,
+  },
+
+  serviceText: {
+    paddingRight: 5,
   },
 
   serviceTitle: {
     fontSize: 14,
+    lineHeight: 18,
     fontWeight: "800",
     color: "#182A33",
-    lineHeight: 19,
   },
 
   serviceSubtitle: {
     fontSize: 11,
-    color: "#687F89",
+    lineHeight: 15,
+    color: "#71858D",
     marginTop: 4,
   },
 
-  urgentCard: {
-    backgroundColor: "#0A9FB5",
-    borderRadius: 16,
-    padding: 15,
-    flexDirection: "row",
+  serviceArrow: {
+    position: "absolute",
+    right: 11,
+    top: 13,
+    width: 25,
+    height: 25,
+    borderRadius: 13,
+    backgroundColor: "#F5F9FA",
     alignItems: "center",
-    marginBottom: 26,
+    justifyContent: "center",
   },
 
-  urgentIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 22,
+  /* --------------------------------
+     QUICK REQUEST
+  -------------------------------- */
+
+  quickRequestCard: {
+    minHeight: 82,
+    borderRadius: 17,
+    backgroundColor: "#0A9FB5",
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+    marginBottom: 15,
+  },
+
+  quickRequestIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  urgentContent: {
+  quickRequestContent: {
     flex: 1,
     marginLeft: 12,
+    marginRight: 8,
   },
 
-  urgentTitle: {
-    color: "#FFFFFF",
+  quickRequestTitle: {
     fontSize: 14,
+    lineHeight: 19,
     fontWeight: "800",
+    color: "#FFFFFF",
   },
 
-  urgentSubtitle: {
-    color: "#D5F1F4",
+  quickRequestSubtitle: {
     fontSize: 11,
-    marginTop: 3,
+    lineHeight: 16,
+    color: "#D7F2F5",
+    marginTop: 2,
   },
 
-  urgentArrow: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  quickRequestArrow: {
+    width: 35,
+    height: 35,
+    borderRadius: 18,
     backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  trustCard: {
+  /* --------------------------------
+     TRUST
+  -------------------------------- */
+
+  trustRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F0FDF4",
-    borderRadius: 14,
-    padding: 14,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
   },
 
-  trustTextContainer: {
+  trustIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#ECFDF3",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  trustContent: {
     flex: 1,
-    marginLeft: 11,
+    marginLeft: 10,
   },
 
   trustTitle: {
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 17,
     fontWeight: "800",
     color: "#166534",
   },
 
   trustSubtitle: {
     fontSize: 11,
-    color: "#4D7C0F",
-    marginTop: 3,
+    lineHeight: 16,
+    color: "#66836E",
+    marginTop: 1,
+  },
+
+  bottomSpacing: {
+    height: 12,
   },
 });
