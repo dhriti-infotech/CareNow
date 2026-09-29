@@ -1,13 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import ProfilePicturePicker from "@/components/ProfilePicturePicker";
 import { useAuth } from "@/context/auth-context";
-
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
-
+  const router = useRouter();
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
@@ -24,7 +24,7 @@ export default function ProfileScreen() {
       <View style={styles.content}>
         <ProfilePicturePicker owner="USER" user={user} size={104} />
 
-        <Text style={styles.title}>{user?.email || "Your Profile"}</Text>
+        <Text style={styles.title}>{user?.name || "Your Profile"}</Text>
 
         {user?.email && <Text style={styles.mobile}>{user.email}</Text>}
 
@@ -32,39 +32,56 @@ export default function ProfileScreen() {
           <Text style={styles.roleText}>{user?.role || "USER"}</Text>
         </View>
 
-        <Text style={styles.subtitle}>Manage your profile, saved addresses and preferences here.</Text>
+        <Text style={styles.subtitle}>
+          Manage your profile, saved addresses and preferences here.
+        </Text>
 
         <View style={styles.accountCard}>
-          <View style={styles.accountRow}>
+          <TouchableOpacity
+            style={styles.accountRow}
+            activeOpacity={0.7}
+            onPress={() => router.push("/personal-information")}
+          >
             <View style={styles.rowIcon}>
               <Ionicons name="person-outline" size={20} color="#2563EB" />
             </View>
-
             <View style={styles.rowContent}>
               <Text style={styles.rowTitle}>Personal Information</Text>
-              <Text style={styles.rowSubtitle}>Manage your personal details</Text>
+              <Text style={styles.rowSubtitle}>
+                Manage your personal details
+              </Text>
             </View>
 
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.separator} />
 
-          <View style={styles.accountRow}>
+          <TouchableOpacity
+            style={styles.accountRow}
+            activeOpacity={0.7}
+            onPress={() => router.push("/saved-addresses")}
+          >
             <View style={styles.rowIcon}>
               <Ionicons name="location-outline" size={20} color="#2563EB" />
             </View>
 
             <View style={styles.rowContent}>
               <Text style={styles.rowTitle}>Saved Addresses</Text>
-              <Text style={styles.rowSubtitle}>Manage your service locations</Text>
+              <Text style={styles.rowSubtitle}>
+                Manage your service locations
+              </Text>
             </View>
 
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </View>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} activeOpacity={0.85} onPress={handleLogout}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          activeOpacity={0.85}
+          onPress={handleLogout}
+        >
           <Ionicons name="log-out-outline" size={21} color="#DC2626" />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
