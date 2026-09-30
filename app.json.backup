@@ -67,8 +67,7 @@
         }
       ],
       "expo-image",
-      "expo-web-browser",
-      "@react-native-community/datetimepicker"
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -77,9 +76,8 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "fb2b61f8-f502-41a7-a507-9ec241bb5c91"
+        "projectId": "308c0a05-821b-4231-89f2-523be632af69"
       }
-    },
-    "owner": "dhriti-infotech-expo"
+    }
   }
 }
