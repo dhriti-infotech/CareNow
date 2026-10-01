@@ -503,7 +503,9 @@ export default function ProfessionalHomeScreen() {
         contentContainerStyle={[
           styles.content,
           {
-            paddingBottom: 94 + insets.bottom,
+            // The professional bottom navigation is now part of the normal
+            // layout flow, so content does not render underneath it.
+            paddingBottom: 24,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -1131,7 +1133,11 @@ export default function ProfessionalHomeScreen() {
         style={[
           styles.bottomNav,
           {
-            paddingBottom: Math.max(insets.bottom, 8),
+            // Keep the app navigation above Android's system navigation area.
+            // The bar is in normal layout flow, so dashboard content cannot
+            // be hidden behind it.
+            height: 68 + insets.bottom,
+            paddingBottom: insets.bottom,
           },
         ]}
       >
@@ -2496,11 +2502,7 @@ const styles = StyleSheet.create({
    */
 
   bottomNav: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 68,
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
@@ -2508,7 +2510,6 @@ const styles = StyleSheet.create({
     borderTopColor: "#E1ECEE",
     paddingHorizontal: 18,
     paddingTop: 6,
-    zIndex: 20,
     elevation: 14,
   },
 

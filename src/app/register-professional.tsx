@@ -157,14 +157,13 @@ export default function RegisterProfessionalScreen() {
 
         <KeyboardAvoidingView
           style={styles.keyboardAvoidingView}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={0}
         >
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
           >
           <View style={styles.iconContainer}>
             <Ionicons

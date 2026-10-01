@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  KeyboardAvoidingView,
   PanResponder,
   StyleSheet,
   Text,
@@ -392,6 +393,10 @@ export default function NurseServiceMapScreen() {
         onRequestClose={() => !actionBusy && setCompletionCodeModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ width: "100%" }}
+          >
           <View style={styles.completionModal}>
             <View style={styles.completionIcon}>
               <Ionicons name="keypad-outline" size={26} color="#2563EB" />
@@ -425,6 +430,7 @@ export default function NurseServiceMapScreen() {
               </TouchableOpacity>
             </View>
           </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </SafeAreaView>

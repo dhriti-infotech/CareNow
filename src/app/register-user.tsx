@@ -4,6 +4,8 @@ import { useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    KeyboardAvoidingView,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -83,7 +85,15 @@ export default function RegisterUserScreen() {
           <View style={styles.spacer} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.iconContainer}>
             <Ionicons name="person-add-outline" size={32} color="#0A9FB5" />
           </View>
@@ -135,6 +145,7 @@ export default function RegisterUserScreen() {
             )}
           </TouchableOpacity>
         </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </SafeAreaView>
   );
@@ -146,6 +157,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   container: {
+    flex: 1,
+  },
+  keyboardAvoidingView: {
     flex: 1,
   },
   header: {
@@ -175,7 +189,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingBottom: 35,
+    paddingBottom: 140,
   },
   iconContainer: {
     width: 68,

@@ -333,11 +333,7 @@ export default function VerifyOtpScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
-        }
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         {/* ===================================================
             HEADER
@@ -682,7 +678,7 @@ const styles = StyleSheet.create({
 
     paddingTop: 44,
 
-    paddingBottom: 30,
+    paddingBottom: 140,
 
     alignItems: "center",
   },

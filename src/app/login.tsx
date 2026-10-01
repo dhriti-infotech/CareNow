@@ -89,7 +89,7 @@
 //     <SafeAreaView style={styles.safeArea}>
 //       <KeyboardAvoidingView
 //         style={styles.container}
-//         behavior={Platform.OS === "ios" ? "padding" : undefined}
+//         behavior={Platform.OS === "ios" ? "padding" : "height"}
 //       >
 //         <ScrollView
 //           contentContainerStyle={styles.content}
@@ -514,7 +514,7 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
           contentContainerStyle={styles.content}
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 0,
-    paddingBottom: 22,
+    paddingBottom: 140,
   },
   heroSection: {
     width: "100%",

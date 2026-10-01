@@ -74,13 +74,36 @@ export async function registerProfessionalPushNotifications(): Promise<boolean> 
 
   try {
     if (Platform.OS === 'android') {
+      // Android notification channels are persistent. Older CareNow builds
+      // created this channel with `sound: 'default'`, which expo-notifications
+      // can interpret as a custom sound name in a native build. Delete the
+      // existing channel first so an updated channel is created cleanly.
+      try {
+        await Notifications.deleteNotificationChannelAsync(REQUEST_CHANNEL_ID);
+      } catch {
+        // The channel may not exist yet; that is fine.
+      }
+
+      // Do not set a custom sound here. Android will use the device/channel
+      // default without requiring a bundled sound resource.
       await Notifications.setNotificationChannelAsync(REQUEST_CHANNEL_ID, {
         name: 'Service Requests',
         importance: Notifications.AndroidImportance.MAX,
-        sound: 'default',
         vibrationPattern: [0, 250, 250, 250],
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
+    }
+
+    // Android push-token registration requires Firebase/FCM native
+    // configuration in the standalone/development build. If the project has
+    // not been configured with google-services.json yet, skip registration
+    // quietly so the professional dashboard is not polluted with a runtime
+    // warning. Add android.googleServicesFile once FCM is configured.
+    if (Platform.OS === 'android' && !Constants.expoConfig?.android?.googleServicesFile) {
+      console.info(
+        '[CareNow Notifications] Android FCM is not configured (google-services.json missing). Push-token registration skipped.',
+      );
+      return false;
     }
 
     const existing = await Notifications.getPermissionsAsync();
