@@ -1,7 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabLayout() {
+  const { bottom: bottomInset } = useSafeAreaInsets();
+
+  // Android can render the app edge-to-edge. The fixed tab-bar height that
+  // was previously used did not reserve space for the Android navigation
+  // bar, so the 3-button/gesture system UI could appear on top of the tabs.
+  // Reserve the system bottom inset explicitly, while keeping the actual
+  // tab controls in the same 64dp visual area used by the app.
+  const tabBarHeight = 64 + bottomInset;
+
   return (
     <Tabs
       screenOptions={{
@@ -13,12 +23,15 @@ export default function TabLayout() {
           fontWeight: "600",
         },
         tabBarStyle: {
-          height: 64,
+          height: tabBarHeight,
           paddingTop: 5,
-          paddingBottom: 7,
+          paddingBottom: bottomInset,
           borderTopWidth: 1,
           borderTopColor: "#E2E8F0",
           backgroundColor: "#FFFFFF",
+        },
+        tabBarItemStyle: {
+          height: 59,
         },
       }}
     >

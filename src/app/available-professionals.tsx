@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   continuePatientMatching,
@@ -105,6 +105,7 @@ function ProfessionalCard({
 }
 
 export default function AvailableProfessionalsScreen() {
+  const insets = useSafeAreaInsets();
   const { requestId } = useLocalSearchParams<{ requestId?: string }>();
   const [professionals, setProfessionals] = useState<AvailableProfessional[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,7 +178,7 @@ export default function AvailableProfessionalsScreen() {
           />
         )}
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 18) }]}>
           <View style={styles.pricingHint}>
             <Ionicons name="pricetag-outline" size={18} color="#16A34A" />
             <Text style={styles.pricingHintText}>Pricing: &lt;6 km ₹199 · 6–10 km ₹249 · &gt;10–&lt;15 km ₹299</Text>

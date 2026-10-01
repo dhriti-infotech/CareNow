@@ -35,6 +35,11 @@ export async function downloadAuthenticatedImage(
     });
 
     if (!response.ok) {
+      // A 404 means the user has not uploaded a profile picture yet. This is
+      // an expected state and should not be logged as an application error.
+      if (response.status === 404) {
+        return null;
+      }
       throw new Error(`Profile picture request failed with HTTP ${response.status}`);
     }
 

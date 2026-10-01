@@ -191,7 +191,7 @@ export default function PersonalInformationScreen() {
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -620,6 +620,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 24,
+    paddingBottom: 140,
   },
 
   /* Profile */

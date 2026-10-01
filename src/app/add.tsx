@@ -200,7 +200,7 @@ export default function AddAddressScreen() {
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           {/* Header */}
 
@@ -836,6 +836,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 22,
+    paddingBottom: 140,
   },
 
   /* Intro */

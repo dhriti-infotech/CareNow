@@ -6,6 +6,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -52,7 +53,7 @@ export default function RateServiceScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.header}>
           <TouchableOpacity style={styles.headerButton} onPress={skip} disabled={submitting}>
@@ -62,7 +63,12 @@ export default function RateServiceScreen() {
           <View style={styles.headerSpacer} />
         </View>
 
-        <View style={styles.content}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.content, { paddingBottom: 140 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.successCircle}>
             <Ionicons name="checkmark" size={48} color="#FFFFFF" />
           </View>
@@ -125,7 +131,7 @@ export default function RateServiceScreen() {
               <Text style={styles.skipText}>Rate later</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

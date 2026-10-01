@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -15,7 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { createNurseRequest, type PaymentMethod } from "@/api/patientRequests";
 import { useAuth } from "@/context/auth-context";
@@ -70,6 +71,7 @@ const careOptions: CareOption[] = [
 ];
 
 export default function RequestNurseScreen() {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
   const [step, setStep] = useState<Step>(1);
@@ -974,6 +976,10 @@ export default function RequestNurseScreen() {
 
         {renderProgress()}
 
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
@@ -984,10 +990,16 @@ export default function RequestNurseScreen() {
           {step === 3 && renderStep3()}
           {step === 4 && renderStep4()}
 
-          <View style={{ height: 105 }} />
+          <View style={{ height: 125 + insets.bottom }} />
         </ScrollView>
+        </KeyboardAvoidingView>
 
-        <View style={styles.bottomBar}>
+        <View
+          style={[
+            styles.bottomBar,
+            { paddingBottom: Math.max(insets.bottom, 12) },
+          ]}
+        >
           {step === 1 && (
             <TouchableOpacity
               activeOpacity={0.85}
