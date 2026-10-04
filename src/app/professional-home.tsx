@@ -345,13 +345,12 @@ export default function ProfessionalHomeScreen() {
    */
 
   const activeService = useMemo(() => {
-    const activities = dashboard?.recentActivities ?? [];
-
-    return activities.find((request) =>
-      ["ACCEPTED", "EN_ROUTE", "ARRIVED", "IN_SERVICE"].includes(
-        request.requestStatus,
-      ),
-    );
+    // Active services must come from the backend's professional-scoped
+    // `activeServices` collection. Do not derive this from recentActivities:
+    // another professional's OFFER can be EXPIRED while the shared service
+    // request itself is already IN_SERVICE for the professional who accepted it.
+    const activeServices = dashboard?.activeServices ?? [];
+    return activeServices[0] ?? null;
   }, [dashboard]);
 
   /*
@@ -1029,10 +1028,10 @@ export default function ProfessionalHomeScreen() {
                 activeOpacity={0.85}
                 onPress={() => {
                   if (
-                    request.requestStatus === "ACCEPTED" ||
-                    request.requestStatus === "EN_ROUTE" ||
-                    request.requestStatus === "ARRIVED" ||
-                    request.requestStatus === "IN_SERVICE"
+                    request.activityStatus === "ACCEPTED" ||
+                    request.activityStatus === "EN_ROUTE" ||
+                    request.activityStatus === "ARRIVED" ||
+                    request.activityStatus === "IN_SERVICE"
                   ) {
                     router.push({
                       pathname: "/nurse-service-map",
